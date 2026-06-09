@@ -6,13 +6,16 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/AppShell";
+import { useStore } from "@/lib/store";
+import { getSessionEmail } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -39,9 +42,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -52,6 +52,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+        <div className="mt-4 p-4 bg-muted rounded-lg text-left overflow-auto max-h-60">
+          <p className="text-xs font-mono text-destructive font-bold">{error.message}</p>
+          {error.stack && (
+            <pre className="mt-2 text-[10px] font-mono text-muted-foreground">
+              {error.stack}
+            </pre>
+          )}
+        </div>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -79,9 +87,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SARRAH AUTO — Gestion Auto-École" },
-      { name: "description", content: "Plateforme de gestion d'auto-école : élèves, formations, factures, paiements et examens." },
-      { property: "og:title", content: "SARRAH AUTO" },
+      { title: "SARAH AUTO — Gestion Auto-École" },
+      {
+        name: "description",
+        content:
+          "Plateforme de gestion d'auto-école : élèves, formations, factures, paiements et examens.",
+      },
+      { property: "og:title", content: "SARAH AUTO" },
       { property: "og:description", content: "ERP/CRM pour la gestion d'une auto-école." },
       { property: "og:type", content: "website" },
     ],
@@ -117,10 +129,57 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const fetchData = useStore((s) => s.fetchData);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setSessionEmail(getSessionEmail());
+    setIsAuthLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const storedEmail = getSessionEmail();
+    if (storedEmail !== sessionEmail) {
+      setSessionEmail(storedEmail);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (sessionEmail) {
+      fetchData();
+    }
+  }, [sessionEmail, fetchData]);
+
+  useEffect(() => {
+    const publicRoutes = ["/login", "/signup"];
+    if (!isAuthLoading && !sessionEmail && !publicRoutes.includes(location.pathname)) {
+      navigate({ to: "/login" });
+    }
+    if (!isAuthLoading && sessionEmail && publicRoutes.includes(location.pathname)) {
+      navigate({ to: "/" });
+    }
+  }, [sessionEmail, isAuthLoading, location.pathname, navigate]);
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      {sessionEmail ? (
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      ) : (
+        <Outlet />
+      )}
       <Toaster />
     </QueryClientProvider>
   );
