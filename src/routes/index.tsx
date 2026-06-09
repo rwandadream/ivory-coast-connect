@@ -22,7 +22,18 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import React, { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts";
 const DashboardCharts = lazy(() => import("@/components/DashboardCharts"));
 
 export const Route = createFileRoute("/")({
@@ -46,7 +57,12 @@ const StatCard = memo(function StatCard({
   accent?: boolean;
 }) {
   return (
-    <Card className={cn("glass glass-hover border-slate-700/70 bg-slate-950/80", accent && "border-primary/30") }>
+    <Card
+      className={cn(
+        "glass glass-hover border-slate-700/70 bg-slate-950/80",
+        accent && "border-primary/30",
+      )}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -61,7 +77,9 @@ const StatCard = memo(function StatCard({
           <div
             className={cn(
               "grid h-14 w-14 place-items-center rounded-3xl shadow-glow transition-all duration-300",
-              accent ? "bg-gradient-primary text-primary-foreground" : "bg-slate-800 text-slate-100",
+              accent
+                ? "bg-gradient-primary text-primary-foreground"
+                : "bg-slate-800 text-slate-100",
             )}
           >
             <Icon className="h-6 w-6" />
@@ -94,7 +112,7 @@ function Dashboard() {
         const inscription = inscriptions.find((i) => i.id === f.inscription_id);
         const eleve = eleves.find((e) => e.id === f.eleve_id) ?? null;
         const formation = inscription
-          ? formations.find((fr) => fr.id === inscription.formation_id) ?? null
+          ? (formations.find((fr) => fr.id === inscription.formation_id) ?? null)
           : null;
         const paye = getMontantPaye(f.id);
         const statut = getStatutFacture(f.id);
@@ -103,7 +121,10 @@ function Dashboard() {
     [factures, eleves, inscriptions, formations, getMontantPaye, getStatutFacture],
   );
 
-  const totalRecouvre = useMemo(() => paiements.reduce((sum, p) => sum + p.montant, 0), [paiements]);
+  const totalRecouvre = useMemo(
+    () => paiements.reduce((sum, p) => sum + p.montant, 0),
+    [paiements],
+  );
   const totalFacture = useMemo(
     () => facturesWithDetails.reduce((sum, item) => sum + item.facture.montant, 0),
     [facturesWithDetails],
@@ -167,10 +188,16 @@ function Dashboard() {
   );
 
   const elevesActifs = useMemo(
-    () => eleves.filter((eleve) => inscriptions.some((inscription) => inscription.eleve_id === eleve.id)).length,
+    () =>
+      eleves.filter((eleve) =>
+        inscriptions.some((inscription) => inscription.eleve_id === eleve.id),
+      ).length,
     [eleves, inscriptions],
   );
-  const elevesEnAttente = useMemo(() => eleves.length - elevesActifs, [eleves.length, elevesActifs]);
+  const elevesEnAttente = useMemo(
+    () => eleves.length - elevesActifs,
+    [eleves.length, elevesActifs],
+  );
   const nouveauxCeMois = useMemo(
     () =>
       eleves.filter((e) => {
@@ -191,7 +218,20 @@ function Dashboard() {
 
   const enrollmentData = useMemo(() => {
     const months: { name: string; count: number }[] = [];
-    const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+    const monthNames = [
+      "Jan",
+      "Fév",
+      "Mar",
+      "Avr",
+      "Mai",
+      "Juin",
+      "Juil",
+      "Août",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Déc",
+    ];
 
     for (let offset = 5; offset >= 0; offset -= 1) {
       const date = new Date(currentYear, currentMonth - offset, 1);
@@ -306,7 +346,9 @@ function Dashboard() {
                 <CardTitle className="flex items-center gap-2 text-lg font-bold">
                   <TrendingUp className="h-5 w-5 text-primary" /> Finances
                 </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Performance et état des paiements</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Performance et état des paiements
+                </p>
               </div>
               <BarChart3 className="h-5 w-5 text-muted-foreground opacity-50" />
             </CardHeader>
@@ -315,8 +357,18 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={financeData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#6b7280" }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(value) => `${value / 1000}k`} />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
+                      tickFormatter={(value) => `${value / 1000}k`}
+                    />
                     <Tooltip
                       cursor={{ fill: "rgba(59, 130, 246, 0.05)" }}
                       content={({ active, payload }) => {
@@ -350,7 +402,9 @@ function Dashboard() {
             <CardHeader className="flex items-center justify-between pb-2">
               <div>
                 <CardTitle className="text-lg font-bold">Tendances élèves</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Nouveaux inscrits et progression</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nouveaux inscrits et progression
+                </p>
               </div>
             </CardHeader>
             <CardContent>
@@ -372,16 +426,28 @@ function Dashboard() {
               <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                 <p className="text-sm font-semibold text-primary">Taux de réussite</p>
                 <p className="mt-1 text-3xl font-extrabold text-foreground">{tauxReussite}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Sur {examens.length} examen{examens.length > 1 ? "s" : ""} enregistrés</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sur {examens.length} examen{examens.length > 1 ? "s" : ""} enregistrés
+                </p>
               </div>
               <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
                 <p className="text-sm font-semibold text-warning">Examens en attente</p>
                 <p className="mt-1 text-3xl font-extrabold text-foreground">{examensProgrammes}</p>
-                <p className="text-xs text-muted-foreground mt-1">Planifiez les sessions et confirmez les convocations</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Planifiez les sessions et confirmez les convocations
+                </p>
               </div>
               <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
                 <p className="text-sm font-semibold text-destructive">Factures à recouvrer</p>
-                <p className="mt-1 text-3xl font-extrabold text-foreground">{formatXOF(facturesNonPayees.reduce((sum: number, item) => sum + (item.facture.montant - getMontantPaye(item.facture.id)), 0))}</p>
+                <p className="mt-1 text-3xl font-extrabold text-foreground">
+                  {formatXOF(
+                    facturesNonPayees.reduce(
+                      (sum: number, item) =>
+                        sum + (item.facture.montant - getMontantPaye(item.facture.id)),
+                      0,
+                    ),
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">Revenus en souffrance</p>
               </div>
             </CardContent>
@@ -449,10 +515,17 @@ function Dashboard() {
                       {e.prenom} {e.nom}
                     </p>
                     <p className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {e.type_permis}</p>
+                      {e.type_permis}
+                    </p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] border-primary/20 bg-primary/5 text-primary font-bold px-2">
-                    {new Date(e.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] border-primary/20 bg-primary/5 text-primary font-bold px-2"
+                  >
+                    {new Date(e.created_at).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
                   </Badge>
                 </div>
               ))
@@ -467,12 +540,16 @@ function Dashboard() {
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-secondary/20 bg-secondary/5 p-4">
               <p className="text-sm font-semibold text-secondary">Formations disponibles</p>
-              <p className="mt-1 text-3xl font-extrabold text-foreground">{formations.filter((f) => f.actif).length}</p>
+              <p className="mt-1 text-3xl font-extrabold text-foreground">
+                {formations.filter((f) => f.actif).length}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">Catalogue actuel</p>
             </div>
             <div className="rounded-2xl border border-muted/20 bg-muted/10 p-4">
               <p className="text-sm font-semibold text-foreground">Progression des élèves</p>
-              <p className="mt-1 text-xs text-muted-foreground">Consultez les dossiers individuels pour voir les étapes de formation.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Consultez les dossiers individuels pour voir les étapes de formation.
+              </p>
             </div>
           </CardContent>
         </Card>

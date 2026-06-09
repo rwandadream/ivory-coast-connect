@@ -116,7 +116,9 @@ function MoniteursPage() {
                   <p className="font-semibold text-slate-100">
                     {moniteur.prenom} {moniteur.nom}
                   </p>
-                  <p className="text-xs text-muted-foreground">{moniteur.specialite || "General"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {moniteur.specialite || "General"}
+                  </p>
                 </div>
                 <span className="rounded-full bg-slate-800 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-slate-300">
                   {moniteur.statut}

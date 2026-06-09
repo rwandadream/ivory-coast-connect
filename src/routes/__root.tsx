@@ -55,9 +55,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <div className="mt-4 p-4 bg-muted rounded-lg text-left overflow-auto max-h-60">
           <p className="text-xs font-mono text-destructive font-bold">{error.message}</p>
           {error.stack && (
-            <pre className="mt-2 text-[10px] font-mono text-muted-foreground">
-              {error.stack}
-            </pre>
+            <pre className="mt-2 text-[10px] font-mono text-muted-foreground">{error.stack}</pre>
           )}
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -145,7 +143,7 @@ function RootComponent() {
     if (storedEmail !== sessionEmail) {
       setSessionEmail(storedEmail);
     }
-  }, [location.pathname]);
+  }, [location.pathname, sessionEmail]);
 
   useEffect(() => {
     if (sessionEmail) {
