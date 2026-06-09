@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { shallow } from "zustand/shallow";
 import { Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useStore, formatTel, type Moniteur } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -43,7 +44,15 @@ type MoniteurForm = {
 };
 
 function MoniteursPage() {
-  const { moniteurs, addMoniteur, updateMoniteur, deleteMoniteur } = useStore();
+  const { moniteurs, addMoniteur, updateMoniteur, deleteMoniteur } = useStore(
+    (s) => ({
+      moniteurs: s.moniteurs,
+      addMoniteur: s.addMoniteur,
+      updateMoniteur: s.updateMoniteur,
+      deleteMoniteur: s.deleteMoniteur,
+    }),
+    shallow,
+  );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Moniteur | null>(null);
 

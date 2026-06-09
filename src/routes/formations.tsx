@@ -1,28 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { shallow } from "zustand/shallow";
 import { Plus, GraduationCap, Pencil, Trash2, Power } from "lucide-react";
 import { useStore, formatXOF, type Formation } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/formations")({
-  head: () => ({ meta: [{ title: "Formations — SARRAH AUTO" }] }),
+  head: () => ({ meta: [{ title: "Formations — SARAH AUTO" }] }),
   component: FormationsPage,
 });
 
 function FormationsPage() {
-  const { formations, addFormation, updateFormation, deleteFormation } = useStore();
+  const { formations, addFormation, updateFormation, deleteFormation } = useStore(
+    (s) => ({
+      formations: s.formations,
+      addFormation: s.addFormation,
+      updateFormation: s.updateFormation,
+      deleteFormation: s.deleteFormation,
+    }),
+    shallow,
+  );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Formation | null>(null);
 
@@ -44,35 +59,61 @@ function FormationsPage() {
       />
 
       {formations.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="Aucune formation" description="Créez votre première formation." />
+        <EmptyState
+          icon={GraduationCap}
+          title="Aucune formation"
+          description="Créez votre première formation."
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {formations.map((f) => (
-            <Card key={f.id} className={`group p-5 transition-all hover:shadow-elegant ${!f.actif ? "opacity-60" : ""}`}>
+            <Card
+              key={f.id}
+              className={`group p-5 transition-all hover:shadow-elegant ${!f.actif ? "opacity-60" : ""}`}
+            >
               <div className="flex items-start justify-between">
                 <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent text-accent-foreground">
                   <GraduationCap className="h-5 w-5" />
                 </div>
-                <Badge variant={f.actif ? "default" : "secondary"} className={f.actif ? "bg-success text-success-foreground" : ""}>
+                <Badge
+                  variant={f.actif ? "default" : "secondary"}
+                  className={f.actif ? "bg-success text-success-foreground" : ""}
+                >
                   {f.actif ? "Active" : "Inactive"}
                 </Badge>
               </div>
               <h3 className="mt-3 font-semibold">{f.nom}</h3>
-              {f.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{f.description}</p>}
+              {f.description && (
+                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{f.description}</p>
+              )}
               <p className="mt-3 text-2xl font-bold text-primary">{formatXOF(f.prix)}</p>
               <div className="mt-4 flex gap-1.5">
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => handleOpen(f)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => handleOpen(f)}
+                >
                   <Pencil className="mr-1 h-3 w-3" /> Modifier
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => updateFormation(f.id, { actif: !f.actif })}>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => updateFormation(f.id, { actif: !f.actif })}
+                >
                   <Power className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="outline" className="text-destructive" onClick={() => {
-                  if (confirm(`Supprimer la formation "${f.nom}" ?`)) {
-                    deleteFormation(f.id);
-                    toast.success("Formation supprimée");
-                  }
-                }}>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={() => {
+                    if (confirm(`Supprimer la formation "${f.nom}" ?`)) {
+                      deleteFormation(f.id);
+                      toast.success("Formation supprimée");
+                    }
+                  }}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -81,58 +122,115 @@ function FormationsPage() {
         </div>
       )}
 
-      <FormationDialog open={open} onOpenChange={setOpen} editing={editing} onSubmit={(data) => {
-        if (editing) { updateFormation(editing.id, data); toast.success("Formation mise à jour"); }
-        else { addFormation(data); toast.success("Formation créée"); }
-        setOpen(false);
-      }} />
+      <FormationDialog
+        open={open}
+        onOpenChange={setOpen}
+        editing={editing}
+        onSubmit={(data) => {
+          if (editing) {
+            updateFormation(editing.id, data);
+            toast.success("Formation mise à jour");
+          } else {
+            addFormation(data);
+            toast.success("Formation créée");
+          }
+          setOpen(false);
+        }}
+      />
     </div>
   );
 }
 
 function FormationDialog({
-  open, onOpenChange, editing, onSubmit,
+  open,
+  onOpenChange,
+  editing,
+  onSubmit,
 }: {
-  open: boolean; onOpenChange: (b: boolean) => void; editing: Formation | null;
-  onSubmit: (d: Omit<Formation, "id" | "createdAt">) => void;
+  open: boolean;
+  onOpenChange: (b: boolean) => void;
+  editing: Formation | null;
+  onSubmit: (d: Omit<Formation, "id" | "created_at">) => void;
 }) {
-  const [form, setForm] = useState<Omit<Formation, "id" | "createdAt">>({
-    nom: "", description: "", prix: 0, actif: true,
+  const [form, setForm] = useState<Omit<Formation, "id" | "created_at">>({
+    nom: "",
+    description: "",
+    prix: 0,
+    actif: true,
   });
 
   return (
-    <Dialog open={open} onOpenChange={(b) => {
-      onOpenChange(b);
-      if (b) setForm(editing ?? { nom: "", description: "", prix: 0, actif: true });
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(b) => {
+        onOpenChange(b);
+        if (b) setForm(editing ?? { nom: "", description: "", prix: 0, actif: true });
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier la formation" : "Nouvelle formation"}</DialogTitle>
           <DialogDescription>Définissez le nom, le tarif et la description.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); if (!form.nom.trim() || form.prix < 0) { toast.error("Nom et tarif requis"); return; } onSubmit(form); }} className="grid gap-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!form.nom.trim() || form.prix < 0) {
+              toast.error("Nom et tarif requis");
+              return;
+            }
+            onSubmit(form);
+          }}
+          className="grid gap-4"
+        >
           <div>
             <Label htmlFor="nom">Nom *</Label>
-            <Input id="nom" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} required maxLength={80} />
+            <Input
+              id="nom"
+              value={form.nom}
+              onChange={(e) => setForm({ ...form, nom: e.target.value })}
+              required
+              maxLength={80}
+            />
           </div>
           <div>
             <Label htmlFor="desc">Description</Label>
-            <Textarea id="desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={300} rows={2} />
+            <Textarea
+              id="desc"
+              value={form.description ?? ""}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              maxLength={300}
+              rows={2}
+            />
           </div>
           <div>
             <Label htmlFor="prix">Tarif (FCFA) *</Label>
-            <Input id="prix" type="number" min={0} value={form.prix} onChange={(e) => setForm({ ...form, prix: Number(e.target.value) })} required />
+            <MoneyInput
+              id="prix"
+              value={form.prix}
+              onValueChange={(value: number) => setForm({ ...form, prix: value })}
+              placeholder="0"
+              min={0}
+              max={999999999999}
+              required
+            />
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="text-sm font-medium">Formation active</p>
-              <p className="text-xs text-muted-foreground">Disponible pour les nouvelles inscriptions</p>
+              <p className="text-xs text-muted-foreground">
+                Disponible pour les nouvelles inscriptions
+              </p>
             </div>
             <Switch checked={form.actif} onCheckedChange={(c) => setForm({ ...form, actif: c })} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button type="submit" className="bg-gradient-primary">{editing ? "Mettre à jour" : "Créer"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" className="bg-gradient-primary">
+              {editing ? "Mettre à jour" : "Créer"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

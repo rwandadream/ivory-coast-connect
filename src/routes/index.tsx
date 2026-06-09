@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { memo, useMemo, useState } from "react";
+import { shallow } from "zustand/shallow";
 import {
   Users,
   GraduationCap,
@@ -100,7 +101,19 @@ function Dashboard() {
     examens,
     getStatutFacture,
     getMontantPaye,
-  } = useStore();
+  } = useStore(
+    (s) => ({
+      eleves: s.eleves,
+      formations: s.formations,
+      factures: s.factures,
+      paiements: s.paiements,
+      inscriptions: s.inscriptions,
+      examens: s.examens,
+      getStatutFacture: s.getStatutFacture,
+      getMontantPaye: s.getMontantPaye,
+    }),
+    shallow,
+  );
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
