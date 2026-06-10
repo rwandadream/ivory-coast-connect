@@ -17,8 +17,15 @@ export function TelInput({
   required?: boolean;
 }) {
   return (
-    <div className={cn("flex items-stretch overflow-hidden rounded-md border border-input bg-background", className)}>
-      <span className="flex items-center bg-muted px-3 text-sm font-medium text-muted-foreground">+225</span>
+    <div
+      className={cn(
+        "flex items-stretch overflow-hidden rounded-md border border-input bg-background",
+        className,
+      )}
+    >
+      <span className="flex items-center bg-muted px-3 text-sm font-medium text-muted-foreground">
+        +225
+      </span>
       <Input
         id={id}
         required={required}

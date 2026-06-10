@@ -9,16 +9,46 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as PaiementsRouteImport } from './routes/paiements'
+import { Route as MoniteursRouteImport } from './routes/moniteurs'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as FormationsRouteImport } from './routes/formations'
 import { Route as FacturesRouteImport } from './routes/factures'
 import { Route as ExamensRouteImport } from './routes/examens'
 import { Route as ElevesRouteImport } from './routes/eleves'
 import { Route as IndexRouteImport } from './routes/index'
 
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanningRoute = PlanningRouteImport.update({
+  id: '/planning',
+  path: '/planning',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PaiementsRoute = PaiementsRouteImport.update({
   id: '/paiements',
   path: '/paiements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoniteursRoute = MoniteursRouteImport.update({
+  id: '/moniteurs',
+  path: '/moniteurs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FormationsRoute = FormationsRouteImport.update({
@@ -53,7 +83,12 @@ export interface FileRoutesByFullPath {
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
   '/formations': typeof FormationsRoute
+  '/login': typeof LoginRoute
+  '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
+  '/planning': typeof PlanningRoute
+  '/signup': typeof SignupRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +96,12 @@ export interface FileRoutesByTo {
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
   '/formations': typeof FormationsRoute
+  '/login': typeof LoginRoute
+  '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
+  '/planning': typeof PlanningRoute
+  '/signup': typeof SignupRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,7 +110,12 @@ export interface FileRoutesById {
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
   '/formations': typeof FormationsRoute
+  '/login': typeof LoginRoute
+  '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
+  '/planning': typeof PlanningRoute
+  '/signup': typeof SignupRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -80,9 +125,25 @@ export interface FileRouteTypes {
     | '/examens'
     | '/factures'
     | '/formations'
+    | '/login'
+    | '/moniteurs'
     | '/paiements'
+    | '/planning'
+    | '/signup'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/eleves' | '/examens' | '/factures' | '/formations' | '/paiements'
+  to:
+    | '/'
+    | '/eleves'
+    | '/examens'
+    | '/factures'
+    | '/formations'
+    | '/login'
+    | '/moniteurs'
+    | '/paiements'
+    | '/planning'
+    | '/signup'
+    | '/users'
   id:
     | '__root__'
     | '/'
@@ -90,7 +151,12 @@ export interface FileRouteTypes {
     | '/examens'
     | '/factures'
     | '/formations'
+    | '/login'
+    | '/moniteurs'
     | '/paiements'
+    | '/planning'
+    | '/signup'
+    | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -99,16 +165,56 @@ export interface RootRouteChildren {
   ExamensRoute: typeof ExamensRoute
   FacturesRoute: typeof FacturesRoute
   FormationsRoute: typeof FormationsRoute
+  LoginRoute: typeof LoginRoute
+  MoniteursRoute: typeof MoniteursRoute
   PaiementsRoute: typeof PaiementsRoute
+  PlanningRoute: typeof PlanningRoute
+  SignupRoute: typeof SignupRoute
+  UsersRoute: typeof UsersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planning': {
+      id: '/planning'
+      path: '/planning'
+      fullPath: '/planning'
+      preLoaderRoute: typeof PlanningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/paiements': {
       id: '/paiements'
       path: '/paiements'
       fullPath: '/paiements'
       preLoaderRoute: typeof PaiementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/moniteurs': {
+      id: '/moniteurs'
+      path: '/moniteurs'
+      fullPath: '/moniteurs'
+      preLoaderRoute: typeof MoniteursRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/formations': {
@@ -155,8 +261,23 @@ const rootRouteChildren: RootRouteChildren = {
   ExamensRoute: ExamensRoute,
   FacturesRoute: FacturesRoute,
   FormationsRoute: FormationsRoute,
+  LoginRoute: LoginRoute,
+  MoniteursRoute: MoniteursRoute,
   PaiementsRoute: PaiementsRoute,
+  PlanningRoute: PlanningRoute,
+  SignupRoute: SignupRoute,
+  UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

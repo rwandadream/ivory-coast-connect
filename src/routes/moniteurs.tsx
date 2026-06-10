@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useStore, formatTel, type Moniteur } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -45,13 +45,12 @@ type MoniteurForm = {
 
 function MoniteursPage() {
   const { moniteurs, addMoniteur, updateMoniteur, deleteMoniteur } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       moniteurs: s.moniteurs,
       addMoniteur: s.addMoniteur,
       updateMoniteur: s.updateMoniteur,
       deleteMoniteur: s.deleteMoniteur,
-    }),
-    shallow,
+    })),
   );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Moniteur | null>(null);
@@ -189,6 +188,7 @@ function MoniteurDialog({
   editing: Moniteur | null;
   onSubmit: (data: MoniteurForm) => Promise<void>;
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<MoniteurForm>({
     nom: "",
     prenom: "",
@@ -224,7 +224,7 @@ function MoniteurDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier le moniteur" : "Nouveau moniteur"}</DialogTitle>
           <DialogDescription>Enregistrez les informations de votre moniteur.</DialogDescription>
@@ -236,7 +236,12 @@ function MoniteurDialog({
               toast.error("Nom, prénom et téléphone sont requis");
               return;
             }
-            await onSubmit(form);
+            setIsSubmitting(true);
+            try {
+              await onSubmit(form);
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
           className="grid gap-4"
         >
@@ -307,11 +312,16 @@ function MoniteurDialog({
             </Select>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button type="submit" className="bg-gradient-primary">
-              {editing ? "Mettre à jour" : "Enregistrer"}
+            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+              {isSubmitting ? "Chargement..." : editing ? "Mettre à jour" : "Enregistrer"}
             </Button>
           </DialogFooter>
         </form>

@@ -10,6 +10,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { useShallow } from "zustand/shallow";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
@@ -127,23 +128,25 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const fetchData = useStore((s) => s.fetchData);
+  const fetchData = useStore(useShallow((s) => s.fetchData));
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    setSessionEmail(getSessionEmail());
-    setIsAuthLoading(false);
-  }, []);
-
-  useEffect(() => {
     const storedEmail = getSessionEmail();
-    if (storedEmail !== sessionEmail) {
-      setSessionEmail(storedEmail);
+    setSessionEmail(storedEmail);
+    setIsAuthLoading(false);
+
+    const publicRoutes = ["/login", "/signup"];
+    if (!storedEmail && !publicRoutes.includes(location.pathname)) {
+      navigate({ to: "/login" });
     }
-  }, [location.pathname, sessionEmail]);
+    if (storedEmail && publicRoutes.includes(location.pathname)) {
+      navigate({ to: "/" });
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (sessionEmail) {
@@ -151,34 +154,36 @@ function RootComponent() {
     }
   }, [sessionEmail, fetchData]);
 
-  useEffect(() => {
-    const publicRoutes = ["/login", "/signup"];
-    if (!isAuthLoading && !sessionEmail && !publicRoutes.includes(location.pathname)) {
-      navigate({ to: "/login" });
-    }
-    if (!isAuthLoading && sessionEmail && publicRoutes.includes(location.pathname)) {
-      navigate({ to: "/" });
-    }
-  }, [sessionEmail, isAuthLoading, location.pathname, navigate]);
-
-  if (isAuthLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
   return (
-    <QueryClientProvider client={queryClient}>
-      {sessionEmail ? (
-        <AppShell>
-          <Outlet />
-        </AppShell>
-      ) : (
-        <Outlet />
-      )}
-      <Toaster />
-    </QueryClientProvider>
+    <div className="min-h-screen bg-background text-foreground">
+      <QueryClientProvider client={queryClient}>
+        {isAuthLoading ? (
+          <div className="flex min-h-screen items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        ) : (
+          <RootLayout sessionEmail={sessionEmail}>
+            <Outlet />
+          </RootLayout>
+        )}
+        <Toaster />
+      </QueryClientProvider>
+    </div>
+  );
+}
+
+function RootLayout({
+  children,
+  sessionEmail,
+}: {
+  children: ReactNode;
+  sessionEmail: string | null;
+}) {
+  // Use a key to force re-mounting of the whole layout when session state changes
+  // This is safer than trying to reconcile two completely different structures
+  return (
+    <div key={sessionEmail ? "auth" : "public"} className="contents">
+      {sessionEmail ? <AppShell>{children}</AppShell> : children}
+    </div>
   );
 }

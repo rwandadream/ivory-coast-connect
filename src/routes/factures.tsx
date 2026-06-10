@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { Plus, FileText, Printer, Trash2, Eye, Download } from "lucide-react";
 import { useStore, formatXOF, formatTel } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -44,7 +44,7 @@ function FacturesPage() {
     getMontantPaye,
     getStatutFacture,
   } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       factures: s.factures,
       eleves: s.eleves,
       formations: s.formations,
@@ -53,8 +53,7 @@ function FacturesPage() {
       deleteInscription: s.deleteInscription,
       getMontantPaye: s.getMontantPaye,
       getStatutFacture: s.getStatutFacture,
-    }),
-    shallow,
+    })),
   );
   const [openNew, setOpenNew] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
@@ -72,7 +71,7 @@ function FacturesPage() {
         const inscription = inscriptions.find((i) => i.id === f.inscription_id) ?? null;
         const eleve = eleves.find((e) => e.id === f.eleve_id) ?? null;
         const formation = inscription
-          ? formations.find((fr) => fr.id === inscription.formation_id) ?? null
+          ? (formations.find((fr) => fr.id === inscription.formation_id) ?? null)
           : null;
         return {
           facture: f,
@@ -266,11 +265,10 @@ function NouvelleInscriptionDialog({
   }) => Promise<void>;
 }) {
   const { eleves, formations } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       eleves: s.eleves,
       formations: s.formations,
-    }),
-    shallow,
+    })),
   );
   const [eleveId, setEleveId] = useState("");
   const [formationId, setFormationId] = useState("");
@@ -411,7 +409,7 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
     getMontantPaye,
     getStatutFacture,
   } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       factures: s.factures,
       eleves: s.eleves,
       formations: s.formations,
@@ -419,8 +417,7 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
       paiements: s.paiements,
       getMontantPaye: s.getMontantPaye,
       getStatutFacture: s.getStatutFacture,
-    }),
-    shallow,
+    })),
   );
   const f = factureId ? factures.find((x) => x.id === factureId) : null;
   const eleve = f ? eleves.find((e) => e.id === f.eleve_id) : null;
@@ -435,25 +432,31 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
 
   const handleDownloadPDF = async () => {
     if (!f || !eleve || !formation) return;
-    const mod = await import("@/lib/pdf-generator");
-    const generateInvoicePDF = mod.generateInvoicePDF;
-    generateInvoicePDF({
-      numero: f.numero,
-      date: f.date_emission || "",
-      eleve: {
-        nom: eleve.nom,
-        prenom: eleve.prenom,
-        telephone: formatTel(eleve.telephone),
-        adresse: eleve.adresse || undefined,
-      },
-      formation: formation.nom,
-      montant: f.montant,
-      paiements: factPaiements.map((p) => ({
-        date: p.date_paiement || "",
-        montant: p.montant,
-        mode: p.mode_paiement,
-      })),
-    });
+    const toastId = toast.loading("Génération du PDF en cours...");
+    try {
+      const { generateInvoicePDF } = await import("@/lib/pdf-generator");
+      await generateInvoicePDF({
+        numero: f.numero,
+        date: f.date_emission || "",
+        eleve: {
+          nom: eleve.nom,
+          prenom: eleve.prenom,
+          telephone: formatTel(eleve.telephone),
+          adresse: eleve.adresse || undefined,
+        },
+        formation: formation.nom,
+        montant: f.montant,
+        paiements: factPaiements.map((p) => ({
+          date: p.date_paiement || "",
+          montant: p.montant,
+          mode: p.mode_paiement,
+        })),
+      });
+      toast.success("PDF téléchargé avec succès", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de la génération du PDF", { id: toastId });
+    }
   };
 
   return (
@@ -461,132 +464,132 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
       <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
         {f ? (
           <div className="space-y-6 p-2">
-          <div className="flex items-start justify-between border-b pb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-primary">SARAH AUTO</h2>
-              <p className="text-xs text-muted-foreground">Auto-école · Centre de Formation</p>
-              <p className="text-xs text-muted-foreground">Abidjan, Côte d'Ivoire</p>
+            <div className="flex items-start justify-between border-b pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-primary">SARAH AUTO</h2>
+                <p className="text-xs text-muted-foreground">Auto-école · Centre de Formation</p>
+                <p className="text-xs text-muted-foreground">Abidjan, Côte d'Ivoire</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase font-bold text-muted-foreground">Facture</p>
+                <p className="font-mono text-lg font-bold">{f.numero}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(f.date_emission || "").toLocaleDateString("fr-FR")}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs uppercase font-bold text-muted-foreground">Facture</p>
-              <p className="font-mono text-lg font-bold">{f.numero}</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(f.date_emission || "").toLocaleDateString("fr-FR")}
-              </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-                Destinataire
-              </p>
-              {eleve && (
-                <div className="mt-2">
-                  <p className="font-bold text-base">
-                    {eleve.prenom} {eleve.nom}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{formatTel(eleve.telephone)}</p>
-                  {eleve.email && <p className="text-sm text-muted-foreground">{eleve.email}</p>}
-                  {eleve.adresse && (
-                    <p className="text-sm text-muted-foreground">{eleve.adresse}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground font-bold">
-                <tr>
-                  <th className="px-4 py-3 text-left">Désignation</th>
-                  <th className="px-4 py-3 text-right">Montant</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                <tr>
-                  <td className="px-4 py-4">
-                    <p className="font-bold">{formation?.nom ?? "Formation"}</p>
-                    {formation?.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formation.description}
-                      </p>
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                  Destinataire
+                </p>
+                {eleve && (
+                  <div className="mt-2">
+                    <p className="font-bold text-base">
+                      {eleve.prenom} {eleve.nom}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{formatTel(eleve.telephone)}</p>
+                    {eleve.email && <p className="text-sm text-muted-foreground">{eleve.email}</p>}
+                    {eleve.adresse && (
+                      <p className="text-sm text-muted-foreground">{eleve.adresse}</p>
                     )}
-                  </td>
-                  <td className="px-4 py-4 text-right font-bold">{formatXOF(f.montant)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-end">
-            <div className="w-full max-w-[250px] space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-bold">{formatXOF(f.montant)}</span>
-              </div>
-              <div className="flex justify-between text-success">
-                <span>Déjà payé</span>
-                <span className="font-bold">{formatXOF(paye)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2 text-lg">
-                <span className="font-bold text-primary">Reste à payer</span>
-                <span className="font-extrabold text-primary">{formatXOF(reste)}</span>
-              </div>
-            </div>
-          </div>
-
-          {factPaiements.length > 0 && (
-            <div>
-              <p className="mb-3 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-                Historique des paiements
-              </p>
-              <div className="space-y-2">
-                {factPaiements.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-2 text-xs transition-hover hover:bg-muted/30"
-                  >
-                    <span className="font-medium">
-                      {new Date(p.date_paiement || "").toLocaleDateString("fr-FR")} ·{" "}
-                      {p.mode_paiement}
-                    </span>
-                    <span className="font-bold text-success">{formatXOF(p.montant)}</span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
-          )}
 
-          <DialogFooter className="gap-2 sm:gap-0 mt-6">
-            <Button variant="outline" onClick={onClose}>
-              Fermer
-            </Button>
-            <div className="flex gap-2">
-              <Button onClick={() => window.print()} variant="secondary">
-                <Printer className="mr-2 h-4 w-4" /> Imprimer
-              </Button>
-              <Button onClick={handleDownloadPDF} className="bg-gradient-primary">
-                <Download className="mr-2 h-4 w-4" /> Télécharger PDF
-              </Button>
+            <div className="rounded-xl border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground font-bold">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Désignation</th>
+                    <th className="px-4 py-3 text-right">Montant</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="px-4 py-4">
+                      <p className="font-bold">{formation?.nom ?? "Formation"}</p>
+                      {formation?.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formation.description}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-right font-bold">{formatXOF(f.montant)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </DialogFooter>
-        </div>
-      ) : (
-        <div className="space-y-4 p-6 text-center">
-          <p className="text-lg font-semibold">Facture introuvable</p>
-          <p className="text-sm text-muted-foreground">
-            Cette facture n’est plus disponible. Fermez la fenêtre et réessayez.
-          </p>
-          <DialogFooter className="justify-center">
-            <Button variant="outline" onClick={onClose}>
-              Fermer
-            </Button>
-          </DialogFooter>
-        </div>
-      )}
-    </DialogContent>
+
+            <div className="flex justify-end">
+              <div className="w-full max-w-[250px] space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-bold">{formatXOF(f.montant)}</span>
+                </div>
+                <div className="flex justify-between text-success">
+                  <span>Déjà payé</span>
+                  <span className="font-bold">{formatXOF(paye)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 text-lg">
+                  <span className="font-bold text-primary">Reste à payer</span>
+                  <span className="font-extrabold text-primary">{formatXOF(reste)}</span>
+                </div>
+              </div>
+            </div>
+
+            {factPaiements.length > 0 && (
+              <div>
+                <p className="mb-3 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                  Historique des paiements
+                </p>
+                <div className="space-y-2">
+                  {factPaiements.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-2 text-xs transition-hover hover:bg-muted/30"
+                    >
+                      <span className="font-medium">
+                        {new Date(p.date_paiement || "").toLocaleDateString("fr-FR")} ·{" "}
+                        {p.mode_paiement}
+                      </span>
+                      <span className="font-bold text-success">{formatXOF(p.montant)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0 mt-6">
+              <Button variant="outline" onClick={onClose}>
+                Fermer
+              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => window.print()} variant="secondary">
+                  <Printer className="mr-2 h-4 w-4" /> Imprimer
+                </Button>
+                <Button onClick={handleDownloadPDF} className="bg-gradient-primary">
+                  <Download className="mr-2 h-4 w-4" /> Télécharger PDF
+                </Button>
+              </div>
+            </DialogFooter>
+          </div>
+        ) : (
+          <div className="space-y-4 p-6 text-center">
+            <p className="text-lg font-semibold">Facture introuvable</p>
+            <p className="text-sm text-muted-foreground">
+              Cette facture n’est plus disponible. Fermez la fenêtre et réessayez.
+            </p>
+            <DialogFooter className="justify-center">
+              <Button variant="outline" onClick={onClose}>
+                Fermer
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
     </Dialog>
   );
 }

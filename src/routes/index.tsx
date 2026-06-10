@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { memo, useMemo, useState } from "react";
-import { shallow } from "zustand/shallow";
+import { memo, useMemo, useState, useEffect } from "react";
 import {
   Users,
   GraduationCap,
@@ -23,19 +22,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import React, { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
+import { useShallow } from "zustand/shallow";
+
 const DashboardCharts = lazy(() => import("@/components/DashboardCharts"));
+const FinanceChart = lazy(() => import("@/components/FinanceChart"));
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,40 +40,49 @@ const StatCard = memo(function StatCard({
   hint,
   icon: Icon,
   accent,
+  index,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   icon: typeof Users;
   accent?: boolean;
+  index: number;
 }) {
   return (
     <Card
       className={cn(
-        "glass glass-hover border-slate-700/70 bg-slate-950/80",
+        "glass group relative overflow-hidden border-slate-700/70 bg-slate-950/80 transition-all duration-500 hover:-translate-y-2 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_rgba(79,70,229,0.3)]",
         accent && "border-primary/30",
+        "animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both",
       )}
+      style={{ animationDelay: `${index * 150}ms` }}
     >
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl transition-all duration-700 group-hover:bg-primary/20 group-hover:scale-150" />
       <CardContent className="p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 group-hover:text-primary transition-colors duration-300">
               {label}
             </p>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-100 sm:text-5xl">
+            <p className="text-4xl font-bold tracking-tight text-slate-100 sm:text-5xl group-hover:text-white transition-all duration-300">
               {value}
             </p>
-            {hint && <p className="mt-2 text-sm leading-6 text-slate-400">{hint}</p>}
+            {hint && (
+              <p className="text-xs font-medium text-slate-500 group-hover:text-slate-300 transition-colors duration-300">
+                {hint}
+              </p>
+            )}
           </div>
           <div
             className={cn(
-              "grid h-14 w-14 place-items-center rounded-3xl shadow-glow transition-all duration-300",
+              "grid h-14 w-14 place-items-center rounded-2xl shadow-glow transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-110 group-hover:shadow-primary/40",
               accent
                 ? "bg-gradient-primary text-primary-foreground"
-                : "bg-slate-800 text-slate-100",
+                : "bg-slate-800 text-slate-100 group-hover:bg-slate-700",
             )}
           >
-            <Icon className="h-6 w-6" />
+            <Icon className="h-7 w-7 transition-transform duration-500 group-hover:scale-110" />
           </div>
         </div>
       </CardContent>
@@ -102,7 +101,7 @@ function Dashboard() {
     getStatutFacture,
     getMontantPaye,
   } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       eleves: s.eleves,
       formations: s.formations,
       factures: s.factures,
@@ -111,9 +110,13 @@ function Dashboard() {
       examens: s.examens,
       getStatutFacture: s.getStatutFacture,
       getMontantPaye: s.getMontantPaye,
-    }),
-    shallow,
+    })),
   );
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
@@ -283,6 +286,19 @@ function Dashboard() {
     }
   };
 
+  if (!isMounted) {
+    return (
+      <div className="space-y-8 pb-10">
+        <PageHeader title="Chargement..." description="Préparation de votre tableau de bord" />
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="h-32 animate-pulse bg-slate-900/50 border-slate-800" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-10 bg-background text-foreground">
       <PageHeader
@@ -330,88 +346,44 @@ function Dashboard() {
           hint={`${nouveauxCeMois} ce mois`}
           icon={Users}
           accent
+          index={0}
         />
         <StatCard
           label="Élèves actifs"
           value={elevesActifs}
           hint={`${elevesEnAttente} en attente`}
           icon={GraduationCap}
+          index={1}
         />
         <StatCard
           label="Revenus mensuels"
           value={formatXOF(paiementsMensuels)}
           hint={`${paiementsThisMonthCount} paiements`}
           icon={Wallet}
+          index={2}
         />
         <StatCard
           label="Factures impayées"
           value={statusCounts.facturesNonPayees}
           hint={`${formatXOF(statusCounts.facturesToCollect)} à recouvrer`}
           icon={FileText}
+          index={3}
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl">
-            <CardHeader className="flex items-center justify-between pb-2">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                  <TrendingUp className="h-5 w-5 text-primary" /> Finances
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Performance et état des paiements
-                </p>
+        <div className="grid gap-6 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 fill-mode-both">
+          <Suspense
+            fallback={
+              <div className="h-[280px] flex items-center justify-center">
+                Chargement des finances...
               </div>
-              <BarChart3 className="h-5 w-5 text-muted-foreground opacity-50" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={financeData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: "#6b7280" }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: "#6b7280" }}
-                      tickFormatter={(value) => `${value / 1000}k`}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(59, 130, 246, 0.05)" }}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="rounded-2xl border bg-background/95 p-3 shadow-elegant">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                {payload[0].payload.name}
-                              </p>
-                              <p className="mt-1 text-base font-semibold text-foreground">
-                                {formatXOF(payload[0].value as number)}
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[12, 12, 0, 0]} barSize={44}>
-                      {financeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+            }
+          >
+            <FinanceChart data={financeData} />
+          </Suspense>
 
-          <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl">
+          <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl transition-all hover:border-primary/20 hover:shadow-glow-sm">
             <CardHeader className="flex items-center justify-between pb-2">
               <div>
                 <CardTitle className="text-lg font-bold">Tendances élèves</CardTitle>
@@ -430,8 +402,8 @@ function Dashboard() {
           </Card>
         </div>
 
-        <div className="space-y-6">
-          <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl">
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500 fill-mode-both">
+          <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl transition-all hover:border-primary/20">
             <CardHeader>
               <CardTitle className="text-base font-bold">Indicateurs clés</CardTitle>
             </CardHeader>
@@ -503,8 +475,8 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-700 fill-mode-both">
+        <Card className="overflow-hidden rounded-[2rem] shadow-elegant border-slate-800/70 bg-card/90 backdrop-blur-xl lg:col-span-2 transition-all hover:border-primary/20">
           <CardHeader>
             <CardTitle className="text-base font-bold">Dernières inscriptions</CardTitle>
           </CardHeader>
@@ -514,10 +486,11 @@ function Dashboard() {
                 Aucun élève inscrit.
               </p>
             ) : (
-              recentEleves.map((e) => (
+              recentEleves.map((e, i) => (
                 <div
                   key={e.id}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition hover:bg-slate-800/70"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-all duration-300 hover:bg-slate-800 hover:translate-x-2 hover:border-primary/30"
+                  style={{ transitionDelay: `${i * 50}ms` }}
                 >
                   <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground shadow-sm">
                     {e.prenom[0]}

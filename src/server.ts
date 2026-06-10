@@ -1,7 +1,14 @@
+import * as fs from "node:fs";
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+
+function logToFile(msg: string) {
+  try {
+    fs.appendFileSync("server-debug.log", `${new Date().toISOString()} ${msg}\n`);
+  } catch (e) {}
+}
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -11,9 +18,16 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
+    logToFile("Importing server-entry...");
+    serverEntryPromise = import("@tanstack/react-start/server-entry")
+      .then((m) => {
+        logToFile("server-entry imported successfully");
+        return (m.default ?? m) as ServerEntry;
+      })
+      .catch((err) => {
+        logToFile(`server-entry import FAILED: ${err.stack || err}`);
+        throw err;
+      });
   }
   return serverEntryPromise;
 }
@@ -30,7 +44,10 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  const captured = consumeLastCapturedError();
+  const error = captured ?? new Error(`h3 swallowed SSR error: ${body}`);
+  logToFile(`H3 SWALLOWED ERROR: ${error instanceof Error ? error.stack : String(error)}`);
+
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -39,12 +56,19 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    logToFile(`FETCH REQUEST: ${request.url}`);
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      if (normalized.status >= 500) {
+        logToFile(`Normalized Response Status: ${normalized.status}`);
+      }
+      return normalized;
     } catch (error) {
-      console.error(error);
+      const errorMsg = `SERVER FETCH ERROR: ${error instanceof Error ? error.stack : String(error)}`;
+      logToFile(errorMsg);
+      console.error(errorMsg);
       return new Response(renderErrorPage(), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },

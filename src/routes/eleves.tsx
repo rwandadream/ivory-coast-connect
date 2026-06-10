@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { Plus, Search, Pencil, Trash2, Users, Phone, Mail, Eye } from "lucide-react";
 import { useStore, formatXOF, formatTel, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -49,51 +49,75 @@ type EleveForm = {
 };
 
 function ElevesPage() {
-  const { eleves, factures, paiements, examens, addEleve, updateEleve, deleteEleve } = useStore(
-    (s) => ({
+  const { eleves, addEleve, updateEleve, deleteEleve } = useStore(
+    useShallow((s) => ({
       eleves: s.eleves,
-      factures: s.factures,
-      paiements: s.paiements,
-      examens: s.examens,
       addEleve: s.addEleve,
       updateEleve: s.updateEleve,
       deleteEleve: s.deleteEleve,
-    }),
-    shallow,
+    })),
   );
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Eleve | null>(null);
-  const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
+  const [selectedEleveId, setSelectedEleveId] = useState<string | null>(null);
 
+  // Derived state
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return eleves.filter((e) =>
-      e.nom.toLowerCase().includes(q) ||
-      e.prenom.toLowerCase().includes(q) ||
-      e.telephone.includes(search) ||
-      e.email?.toLowerCase().includes(q),
+    return eleves.filter(
+      (e) =>
+        e.nom.toLowerCase().includes(q) ||
+        e.prenom.toLowerCase().includes(q) ||
+        e.telephone.includes(search) ||
+        (e.email && e.email.toLowerCase().includes(q)),
     );
   }, [eleves, search]);
+
+  const selectedEleve = useMemo(
+    () => eleves.find((e) => e.id === selectedEleveId) || null,
+    [eleves, selectedEleveId],
+  );
 
   const handleOpen = useCallback((e?: Eleve) => {
     setEditing(e ?? null);
     setOpen(true);
   }, []);
 
-  const permisCounts = useMemo(
-    () =>
-      TYPES_PERMIS.map((type) => ({
-        type,
-        count: eleves.filter((e) => e.type_permis === type).length,
-      })),
-    [eleves],
-  );
-  const nouveauxCeMois = useMemo(
-    () =>
-      eleves.filter((e) => new Date(e.created_at).getMonth() === new Date().getMonth()).length,
-    [eleves],
-  );
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const stats = useMemo(() => {
+    if (!isClient) return { topPermis: "-", monthlyCount: 0 };
+
+    const permis = TYPES_PERMIS.map((type) => ({
+      type,
+      count: eleves.filter((e) => e.type_permis === type).length,
+    }));
+    const topPermis = [...permis].sort((a, b) => b.count - a.count)[0]?.type ?? "-";
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const monthlyCount = eleves.filter(
+      (e) => new Date(e.created_at).getMonth() === currentMonth,
+    ).length;
+
+    return { topPermis, monthlyCount };
+  }, [eleves, isClient]);
+
+  if (!isClient) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="Chargement..." description="Accès aux dossiers élèves" />
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="h-32 animate-pulse bg-slate-900/50 border-slate-800" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -123,9 +147,7 @@ function ElevesPage() {
             <CardDescription>Inscrits ce mois-ci</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
-              {eleves.filter((e) => new Date(e.created_at).getMonth() === new Date().getMonth()).length}
-            </p>
+            <p className="text-3xl font-bold">{stats.monthlyCount}</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
@@ -134,9 +156,7 @@ function ElevesPage() {
             <CardDescription>Préférence actuelle</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
-              {permisCounts.sort((a, b) => b.count - a.count)[0]?.type ?? "-"}
-            </p>
+            <p className="text-3xl font-bold">{stats.topPermis}</p>
           </CardContent>
         </Card>
         <div className="hidden xl:block" />
@@ -152,122 +172,116 @@ function ElevesPage() {
         />
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={eleves.length === 0 ? "Aucun élève" : "Aucun résultat"}
-          description={
-            eleves.length === 0
-              ? "Commencez par enregistrer votre premier élève."
-              : "Essayez une autre recherche."
-          }
-          action={
-            eleves.length === 0 ? (
-              <Button onClick={() => handleOpen()}>
-                <Plus className="mr-1 h-4 w-4" /> Ajouter un élève
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((e) => (
-            <Card key={e.id} className="group p-4 transition-all hover:shadow-elegant">
-              <div className="flex items-start gap-3">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-primary font-semibold text-primary-foreground">
-                  {e.prenom[0]}
-                  {e.nom[0]}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">
-                        {e.prenom} {e.nom}
-                      </p>
-                      <Badge variant="secondary" className="mt-0.5 text-[10px]">
-                        {e.type_permis}
-                      </Badge>
+      <div className="min-h-[200px]">
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={eleves.length === 0 ? "Aucun élève" : "Aucun résultat"}
+            description={
+              eleves.length === 0
+                ? "Commencez par enregistrer votre premier élève."
+                : "Essayez une autre recherche."
+            }
+            action={
+              eleves.length === 0 ? (
+                <Button onClick={() => handleOpen()}>
+                  <Plus className="mr-1 h-4 w-4" /> Ajouter un élève
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((e) => (
+              <Card key={e.id} className="group p-4 transition-all hover:shadow-elegant">
+                <div className="flex items-start gap-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-primary font-semibold text-primary-foreground uppercase">
+                    {(e.prenom?.[0] || "") + (e.nom?.[0] || "")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-100">
+                          {e.prenom} {e.nom}
+                        </p>
+                        <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                          {e.type_permis}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => handleOpen(e)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Supprimer ${e.prenom} ${e.nom} et toutes ses données associées ?`,
+                              )
+                            ) {
+                              deleteEleve(e.id);
+                              toast.success("Élève supprimé");
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => handleOpen(e)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Supprimer ${e.prenom} ${e.nom} et toutes ses données associées ?`,
-                            )
-                          ) {
-                            deleteEleve(e.id);
-                            toast.success("Élève supprimé");
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      <p className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" /> {formatTel(e.telephone)}
+                      </p>
+                      {e.email && (
+                        <p className="flex items-center gap-1.5 truncate">
+                          <Mail className="h-3 w-3" /> {e.email}
+                        </p>
+                      )}
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                        Dossier {e.dossier_code}
+                      </p>
                     </div>
                   </div>
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <p className="flex items-center gap-1.5">
-                      <Phone className="h-3 w-3" /> {formatTel(e.telephone)}
-                    </p>
-                    {e.email && (
-                      <p className="flex items-center gap-1.5 truncate">
-                        <Mail className="h-3 w-3" /> {e.email}
-                      </p>
-                    )}
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Dossier {e.dossier_code}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Statut {e.statut}
-                    </p>
-                  </div>
                 </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setSelectedEleve(e)}>
-                  <Eye className="mr-1 h-3.5 w-3.5" /> Voir
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => handleOpen(e)}
-                >
-                  <Pencil className="mr-1 h-3.5 w-3.5" /> Modifier
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => {
-                    if (
-                      confirm(
-                        `Supprimer ${e.prenom} ${e.nom} et toutes ses données associées ?`,
-                      )
-                    ) {
-                      deleteEleve(e.id);
-                      toast.success("Élève supprimé");
-                    }
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setSelectedEleveId(e.id)}>
+                    <Eye className="mr-1 h-3.5 w-3.5" /> Voir
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleOpen(e)}
+                  >
+                    <Pencil className="mr-1 h-3.5 w-3.5" /> Modifier
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm(`Supprimer ${e.prenom} ${e.nom} ?`)) {
+                        deleteEleve(e.id);
+                        toast.success("Élève supprimé");
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       <EleveDialog
         open={open}
@@ -285,7 +299,7 @@ function ElevesPage() {
         }}
       />
 
-      <EleveDetailsDialog eleve={selectedEleve} onClose={() => setSelectedEleve(null)} />
+      <EleveDetailsDialog eleve={selectedEleve} onClose={() => setSelectedEleveId(null)} />
     </div>
   );
 }
@@ -335,7 +349,7 @@ function EleveDialog({
               adresse: "",
               date_naissance: "",
               type_permis: "B",
-              date_inscription: "",
+              date_inscription: new Date().toISOString().slice(0, 10),
             },
       );
     }
@@ -343,146 +357,145 @@ function EleveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier l'élève" : "Nouvel élève"}</DialogTitle>
           <DialogDescription>Renseignez les informations de l'élève.</DialogDescription>
         </DialogHeader>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!form.nom.trim() || !form.prenom.trim() || !form.telephone.trim()) {
-              toast.error("Nom, prénom et téléphone sont requis");
-              return;
-            }
-            setIsSubmitting(true);
-            try {
-              await onSubmit(form);
-            } finally {
-              setIsSubmitting(false);
-            }
-          }}
-          className="grid gap-4"
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="prenom">Prénom *</Label>
-              <Input
-                id="prenom"
-                value={form.prenom}
-                onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+        <div className="max-h-[80vh] overflow-y-auto px-1">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!form.nom.trim() || !form.prenom.trim() || !form.telephone.trim()) {
+                toast.error("Nom, prénom et téléphone sont requis");
+                return;
+              }
+              setIsSubmitting(true);
+              try {
+                await onSubmit(form);
+              } catch (err) {
+                console.error("Submit error:", err);
+                toast.error("Une erreur est survenue lors de l'enregistrement.");
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            className="grid gap-4 py-4"
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="prenom">Prénom *</Label>
+                <Input
+                  id="prenom"
+                  value={form.prenom}
+                  onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+                  required
+                  maxLength={50}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nom">Nom *</Label>
+                <Input
+                  id="nom"
+                  value={form.nom}
+                  onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                  required
+                  maxLength={50}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tel">Téléphone *</Label>
+              <TelInput
+                id="tel"
+                value={form.telephone}
+                onChange={(v) => setForm({ ...form, telephone: v })}
                 required
-                maxLength={50}
               />
             </div>
-            <div>
-              <Label htmlFor="nom">Nom *</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email || ""}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  maxLength={120}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dn">Date de naissance</Label>
+                <Input
+                  id="dn"
+                  type="date"
+                  value={form.date_naissance || ""}
+                  onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adresse">Adresse</Label>
               <Input
-                id="nom"
-                value={form.nom}
-                onChange={(e) => setForm({ ...form, nom: e.target.value })}
-                required
-                maxLength={50}
+                id="adresse"
+                value={form.adresse || ""}
+                onChange={(e) => setForm({ ...form, adresse: e.target.value })}
+                maxLength={200}
               />
             </div>
-          </div>
-          <div>
-            <Label htmlFor="tel">Téléphone *</Label>
-            <TelInput
-              id="tel"
-              value={form.telephone}
-              onChange={(v) => setForm({ ...form, telephone: v })}
-              required
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email || ""}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                maxLength={120}
-              />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Type de permis *</Label>
+                <Select
+                  value={form.type_permis}
+                  onValueChange={(v) => setForm({ ...form, type_permis: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TYPES_PERMIS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="di">Date d'inscription *</Label>
+                <Input
+                  id="di"
+                  type="date"
+                  value={form.date_inscription || ""}
+                  onChange={(e) => setForm({ ...form, date_inscription: e.target.value })}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="dn">Date de naissance</Label>
-              <Input
-                id="dn"
-                type="date"
-                value={form.date_naissance || ""}
-                onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="adresse">Adresse</Label>
-            <Input
-              id="adresse"
-              value={form.adresse || ""}
-              onChange={(e) => setForm({ ...form, adresse: e.target.value })}
-              maxLength={200}
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label>Type de permis *</Label>
-              <Select
-                value={form.type_permis}
-                onValueChange={(v) => setForm({ ...form, type_permis: v })}
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TYPES_PERMIS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="di">Date d'inscription *</Label>
-              <Input
-                id="di"
-                type="date"
-                value={form.date_inscription || ""}
-                onChange={(e) => setForm({ ...form, date_inscription: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Annuler
-            </Button>
-            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
-              {isSubmitting ? "Chargement..." : editing ? "Mettre à jour" : "Enregistrer"}
-            </Button>
-          </DialogFooter>
-        </form>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+                {isSubmitting ? "Chargement..." : editing ? "Mettre à jour" : "Enregistrer"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function EleveDetailsDialog({
-  eleve,
-  onClose,
-}: {
-  eleve: Eleve | null;
-  onClose: () => void;
-}) {
-  const { factures, paiements, examens, inscriptions, formations, getMontantPaye, getStatutFacture } = useStore(
-    (s) => ({
+function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: () => void }) {
+  const { factures, paiements, examens, inscriptions, formations, getStatutFacture } = useStore(
+    useShallow((s) => ({
       factures: s.factures,
       paiements: s.paiements,
       examens: s.examens,
@@ -490,129 +503,173 @@ function EleveDetailsDialog({
       formations: s.formations,
       getMontantPaye: s.getMontantPaye,
       getStatutFacture: s.getStatutFacture,
-    }),
-    shallow,
+    })),
   );
 
-  if (!eleve) return null;
-
-  const eleveFactures = factures.filter((f) => f.eleve_id === eleve.id);
-  const elevePaiements = paiements.filter((p) => p.eleve_id === eleve.id);
-  const eleveExamens = examens.filter((x) => x.eleve_id === eleve.id);
-  const eleveInscription = inscriptions.find((i) => i.eleve_id === eleve.id);
-  const formation = eleveInscription ? formations.find((f) => f.id === eleveInscription.formation_id) : null;
+  const eleveFactures = useMemo(
+    () => (eleve ? factures.filter((f) => f.eleve_id === eleve.id) : []),
+    [eleve, factures],
+  );
+  const elevePaiements = useMemo(
+    () => (eleve ? paiements.filter((p) => p.eleve_id === eleve.id) : []),
+    [eleve, paiements],
+  );
+  const eleveExamens = useMemo(
+    () => (eleve ? examens.filter((x) => x.eleve_id === eleve.id) : []),
+    [eleve, examens],
+  );
+  const eleveInscription = useMemo(
+    () => (eleve ? inscriptions.find((i) => i.eleve_id === eleve.id) : null),
+    [eleve, inscriptions],
+  );
+  const formation = useMemo(
+    () =>
+      eleveInscription ? formations.find((f) => f.id === eleveInscription.formation_id) : null,
+    [eleveInscription, formations],
+  );
 
   return (
     <Dialog open={!!eleve} onOpenChange={(b) => !b && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Fiche de l'élève</DialogTitle>
           <DialogDescription>Suivez les factures, paiements et examens associés.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6">
-          <div className="grid gap-4 rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Élève</p>
-                <p className="text-2xl font-semibold">{eleve.prenom} {eleve.nom}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  to="/eleves"
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "inline-flex items-center justify-center",
-                  )}
-                >
-                  Retour aux élèves
-                </Link>
-                <Button size="sm" variant="secondary" onClick={onClose}>
-                  Fermer
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Téléphone</p>
-                <p className="mt-1 text-sm font-medium">{formatTel(eleve.telephone)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Email</p>
-                <p className="mt-1 text-sm font-medium">{eleve.email || "—"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Type de permis</p>
-                <p className="mt-1 text-sm font-medium">{eleve.type_permis}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Factures</p>
-                <p className="mt-2 text-2xl font-semibold">{eleveFactures.length}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Paiements</p>
-                <p className="mt-2 text-2xl font-semibold">{elevePaiements.length}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Examens</p>
-                <p className="mt-2 text-2xl font-semibold">{eleveExamens.length}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Formation</p>
-                <p className="mt-2 text-sm font-semibold">{formation?.nom || "Aucune"}</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Factures</p>
-              {eleveFactures.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">Aucune facture enregistrée.</p>
-              ) : (
-                <div className="space-y-2 mt-3">
-                  {eleveFactures.slice(0, 3).map((f) => (
-                    <div key={f.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-                      <p className="text-sm font-semibold">{f.numero}</p>
-                      <p className="text-xs text-muted-foreground">{formatXOF(f.montant)} • {getStatutFacture(f.id)}</p>
-                    </div>
-                  ))}
+        {eleve && (
+          <div className="grid gap-6 mt-4">
+            <div className="grid gap-4 rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Élève</p>
+                  <p className="text-2xl font-semibold">
+                    {eleve.prenom} {eleve.nom}
+                  </p>
                 </div>
-              )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={onClose}>
+                    Fermer
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Téléphone
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{formatTel(eleve.telephone)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Email
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.email || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Type de permis
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.type_permis}</p>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Factures
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">{eleveFactures.length}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Paiements
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">{elevePaiements.length}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Examens
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">{eleveExamens.length}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Formation
+                  </p>
+                  <p className="mt-2 text-sm font-semibold">{formation?.nom || "Aucune"}</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Paiements</p>
-              {elevePaiements.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">Aucun paiement enregistré.</p>
-              ) : (
-                <div className="space-y-2 mt-3">
-                  {elevePaiements.slice(0, 3).map((p) => (
-                    <div key={p.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-                      <p className="text-sm font-semibold">{formatXOF(p.montant)}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(p.date_paiement || p.created_at || "").toLocaleDateString("fr-FR")}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Examens</p>
-              {eleveExamens.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">Aucun examen programmé.</p>
-              ) : (
-                <div className="space-y-2 mt-3">
-                  {eleveExamens.slice(0, 3).map((x) => (
-                    <div key={x.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-                      <p className="text-sm font-semibold">{x.type_examen}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(x.date_examen || "").toLocaleDateString("fr-FR")}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Dernières Factures
+                </p>
+                {eleveFactures.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">Aucune facture.</p>
+                ) : (
+                  <div className="space-y-2 mt-3">
+                    {eleveFactures.slice(0, 3).map((f) => (
+                      <div
+                        key={f.id}
+                        className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3"
+                      >
+                        <p className="text-sm font-semibold">{f.numero}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">
+                          {getStatutFacture(f.id)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Derniers Paiements
+                </p>
+                {elevePaiements.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">Aucun paiement.</p>
+                ) : (
+                  <div className="space-y-2 mt-3">
+                    {elevePaiements.slice(0, 3).map((p) => (
+                      <div
+                        key={p.id}
+                        className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3"
+                      >
+                        <p className="text-sm font-semibold">{formatXOF(p.montant)}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(p.date_paiement || p.created_at || "").toLocaleDateString(
+                            "fr-FR",
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Examens</p>
+                {eleveExamens.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">Aucun examen.</p>
+                ) : (
+                  <div className="space-y-2 mt-3">
+                    {eleveExamens.slice(0, 3).map((x) => (
+                      <div
+                        key={x.id}
+                        className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3"
+                      >
+                        <p className="text-sm font-semibold">{x.type_examen}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(x.date_examen || "").toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

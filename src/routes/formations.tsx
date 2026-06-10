@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useShallow } from "zustand/shallow";
 import { Plus, GraduationCap, Pencil, Trash2, Power } from "lucide-react";
 import { useStore, formatXOF, type Formation } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -30,21 +30,31 @@ export const Route = createFileRoute("/formations")({
 
 function FormationsPage() {
   const { formations, addFormation, updateFormation, deleteFormation } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       formations: s.formations,
       addFormation: s.addFormation,
       updateFormation: s.updateFormation,
       deleteFormation: s.deleteFormation,
-    }),
-    shallow,
+    })),
   );
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Formation | null>(null);
 
-  const handleOpen = (f?: Formation) => {
-    setEditing(f ?? null);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const editingFormation = useMemo(
+    () => formations.find((f) => f.id === editingId) || null,
+    [formations, editingId],
+  );
+
+  const handleOpen = useCallback((f?: Formation) => {
+    setEditingId(f?.id ?? null);
     setOpen(true);
-  };
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setTimeout(() => setEditingId(null), 300);
+  }, []);
 
   return (
     <div>
@@ -123,18 +133,22 @@ function FormationsPage() {
       )}
 
       <FormationDialog
+        key={editingId || "new"}
         open={open}
-        onOpenChange={setOpen}
-        editing={editing}
-        onSubmit={(data) => {
-          if (editing) {
-            updateFormation(editing.id, data);
+        onOpenChange={(val) => {
+          if (!val) handleClose();
+          else setOpen(true);
+        }}
+        editing={editingFormation}
+        onSubmit={async (data) => {
+          if (editingId) {
+            await updateFormation(editingId, data);
             toast.success("Formation mise à jour");
           } else {
-            addFormation(data);
+            await addFormation(data);
             toast.success("Formation créée");
           }
-          setOpen(false);
+          handleClose();
         }}
       />
     </div>
@@ -150,8 +164,9 @@ function FormationDialog({
   open: boolean;
   onOpenChange: (b: boolean) => void;
   editing: Formation | null;
-  onSubmit: (d: Omit<Formation, "id" | "created_at">) => void;
+  onSubmit: (d: Omit<Formation, "id" | "created_at">) => Promise<void>;
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<Omit<Formation, "id" | "created_at">>({
     nom: "",
     description: "",
@@ -159,27 +174,43 @@ function FormationDialog({
     actif: true,
   });
 
+  useEffect(() => {
+    if (open) {
+      setForm(
+        editing
+          ? {
+              nom: editing.nom,
+              description: editing.description || "",
+              prix: editing.prix,
+              actif: editing.actif,
+            }
+          : { nom: "", description: "", prix: 0, actif: true },
+      );
+    }
+  }, [open, editing]);
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(b) => {
-        onOpenChange(b);
-        if (b) setForm(editing ?? { nom: "", description: "", prix: 0, actif: true });
-      }}
-    >
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier la formation" : "Nouvelle formation"}</DialogTitle>
           <DialogDescription>Définissez le nom, le tarif et la description.</DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!form.nom.trim() || form.prix < 0) {
               toast.error("Nom et tarif requis");
               return;
             }
-            onSubmit(form);
+            setIsSubmitting(true);
+            try {
+              await onSubmit(form);
+            } catch (err) {
+              toast.error("Erreur technique");
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
           className="grid gap-4"
         >
@@ -225,11 +256,16 @@ function FormationDialog({
             <Switch checked={form.actif} onCheckedChange={(c) => setForm({ ...form, actif: c })} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button type="submit" className="bg-gradient-primary">
-              {editing ? "Mettre à jour" : "Créer"}
+            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+              {isSubmitting ? "En cours..." : editing ? "Mettre à jour" : "Créer"}
             </Button>
           </DialogFooter>
         </form>

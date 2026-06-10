@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { Plus, UserPlus, Trash2, Edit3 } from "lucide-react";
 import { useStore, type User } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -37,13 +37,12 @@ export const Route = createFileRoute("/users")({
 
 function UsersPage() {
   const { users, addUser, updateUser, deleteUser } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       users: s.users,
       addUser: s.addUser,
       updateUser: s.updateUser,
       deleteUser: s.deleteUser,
-    }),
-    shallow,
+    })),
   );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
@@ -91,7 +90,9 @@ function UsersPage() {
             <CardTitle>Administrateurs</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{users.filter((u) => u.role === "administrateur").length}</p>
+            <p className="text-3xl font-bold">
+              {users.filter((u) => u.role === "administrateur").length}
+            </p>
             <p className="text-sm text-muted-foreground">Accès complet</p>
           </CardContent>
         </Card>
@@ -100,7 +101,9 @@ function UsersPage() {
             <CardTitle>Moniteurs</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{users.filter((u) => u.role === "moniteur").length}</p>
+            <p className="text-3xl font-bold">
+              {users.filter((u) => u.role === "moniteur").length}
+            </p>
             <p className="text-sm text-muted-foreground">Gestion des sessions</p>
           </CardContent>
         </Card>
@@ -109,7 +112,9 @@ function UsersPage() {
             <CardTitle>Conseillers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{users.filter((u) => u.role === "conseiller").length}</p>
+            <p className="text-3xl font-bold">
+              {users.filter((u) => u.role === "conseiller").length}
+            </p>
             <p className="text-sm text-muted-foreground">Suivi commercial</p>
           </CardContent>
         </Card>
@@ -218,23 +223,24 @@ function UserDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    if (editing) {
-      setName(editing.name);
-      setEmail(editing.email);
-      setRole(editing.role as Role);
-      setPassword("");
-    } else {
-      setName("");
-      setEmail("");
-      setRole("administrateur");
-      setPassword("");
+    if (open) {
+      if (editing) {
+        setName(editing.name);
+        setEmail(editing.email);
+        setRole(editing.role as Role);
+        setPassword("");
+      } else {
+        setName("");
+        setEmail("");
+        setRole("administrateur");
+        setPassword("");
+      }
     }
   }, [open, editing]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier l'utilisateur" : "Nouvel utilisateur"}</DialogTitle>
           <DialogDescription>
@@ -268,17 +274,23 @@ function UserDialog({
           className="grid gap-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="name">Nom</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+            <div className="space-y-2">
               <Label>Rôle</Label>
               <Select value={role} onValueChange={(value) => setRole(value as Role)}>
                 <SelectTrigger>
@@ -294,7 +306,7 @@ function UserDialog({
               </Select>
             </div>
             {!editing && (
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
                 <Input
                   id="password"
@@ -306,8 +318,13 @@ function UserDialog({
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
             <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>

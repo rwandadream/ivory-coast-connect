@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useShallow } from "zustand/shallow";
 import { Plus, Wallet, Trash2, Banknote, Smartphone, Building } from "lucide-react";
 import { useStore, formatXOF, labelModePaiement, type ModePaiement } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
@@ -43,28 +43,47 @@ const MODE_ICONS: Record<ModePaiement, typeof Banknote> = {
 
 function PaiementsPage() {
   const { paiements, factures, eleves, addPaiement, deletePaiement, getMontantPaye } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       paiements: s.paiements,
       factures: s.factures,
       eleves: s.eleves,
       addPaiement: s.addPaiement,
       deletePaiement: s.deletePaiement,
       getMontantPaye: s.getMontantPaye,
-    }),
-    shallow,
+    })),
   );
-  const [open, setOpen] = useState(false);
 
-  const total = paiements.reduce((s, p) => s + p.montant, 0);
+  const [open, setOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const total = useMemo(() => paiements.reduce((s, p) => s + p.montant, 0), [paiements]);
+
+  const handleOpen = useCallback(() => {
+    setOpen(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="Chargement..." description="Accès aux règlements" />
+        <div className="min-h-[300px] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Paiements"
-        description={`${paiements.length} paiement${paiements.length > 1 ? "s" : ""} · Total recouvré : ${formatXOF(total)}`}
+        description={`${paiements.length} paiement${paiements.length > 1 ? "s" : ""} · Total : ${formatXOF(total)}`}
         actions={
           <Button
-            onClick={() => setOpen(true)}
+            onClick={handleOpen}
             className="bg-gradient-primary shadow-glow transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
             disabled={factures.length === 0}
           >
@@ -73,72 +92,76 @@ function PaiementsPage() {
         }
       />
 
-      {paiements.length === 0 ? (
-        <EmptyState
-          icon={Wallet}
-          title="Aucun paiement"
-          description={
-            factures.length === 0
-              ? "Créez d'abord une facture avant d'enregistrer un paiement."
-              : "Enregistrez votre premier paiement."
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          {paiements.map((p) => {
-            const facture = factures.find((f) => f.id === p.facture_id);
-            const eleve = eleves.find((e) => e.id === p.eleve_id);
-            const Icon = MODE_ICONS[p.mode_paiement as ModePaiement];
-            return (
-              <Card
-                key={p.id}
-                className="flex items-center gap-4 p-4 transition-all hover:shadow-elegant"
-              >
-                <div className="grid h-11 w-11 place-items-center rounded-full bg-success/15 text-success">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold">{eleve ? `${eleve.prenom} ${eleve.nom}` : "—"}</p>
-                    {facture && (
-                      <Badge variant="outline" className="font-mono text-[10px]">
-                        {facture.numero}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {labelModePaiement(p.mode_paiement)} ·{" "}
-                    {new Date(p.date_paiement || "").toLocaleDateString("fr-FR")}
-                    {p.reference && ` · Réf. ${p.reference}`}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-success">{formatXOF(p.montant)}</p>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => {
-                    if (confirm("Supprimer ce paiement ?")) {
-                      deletePaiement(p.id);
-                      toast.success("Paiement supprimé");
-                    }
-                  }}
+      <div className="min-h-[300px]">
+        {paiements.length === 0 ? (
+          <EmptyState
+            icon={Wallet}
+            title="Aucun paiement"
+            description={
+              factures.length === 0 ? "Créez une facture d'abord." : "Enregistrez un règlement."
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {paiements.map((p) => {
+              const facture = factures.find((f) => f.id === p.facture_id);
+              const eleve = eleves.find((e) => e.id === p.eleve_id);
+              const Icon = MODE_ICONS[p.mode_paiement as ModePaiement] || Banknote;
+              return (
+                <Card
+                  key={p.id}
+                  className="flex items-center gap-4 p-4 transition-all hover:shadow-elegant"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  <div className="grid h-11 w-11 place-items-center rounded-full bg-success/15 text-success">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">
+                        {eleve ? `${eleve.prenom} ${eleve.nom}` : "—"}
+                      </p>
+                      {facture && (
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {facture.numero}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {labelModePaiement(p.mode_paiement)} ·{" "}
+                      {isClient
+                        ? new Date(p.date_paiement || "").toLocaleDateString("fr-FR")
+                        : "..."}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-success">{formatXOF(p.montant)}</p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm("Supprimer ?")) {
+                        deletePaiement(p.id);
+                        toast.success("Supprimé");
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <PaiementDialog
+        key={open ? "open" : "closed"}
         open={open}
         onOpenChange={setOpen}
-        onSubmit={(data) => {
-          addPaiement(data);
+        onSubmit={async (data) => {
+          await addPaiement(data);
           toast.success("Paiement enregistré");
           setOpen(false);
         }}
@@ -162,17 +185,17 @@ function PaiementDialog({
     date_paiement: string;
     reference?: string;
     notes?: string;
-  }) => void;
+  }) => Promise<void>;
 }) {
   const { factures, eleves, getMontantPaye, getStatutFacture } = useStore(
-    (s) => ({
+    useShallow((s) => ({
       factures: s.factures,
       eleves: s.eleves,
       getMontantPaye: s.getMontantPaye,
       getStatutFacture: s.getStatutFacture,
-    }),
-    shallow,
+    })),
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [facture_id, setFactureId] = useState("");
   const [montant, setMontant] = useState(0);
   const [mode_paiement, setMode] = useState<ModePaiement>("especes");
@@ -180,62 +203,60 @@ function PaiementDialog({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
 
+  useEffect(() => {
+    if (open) {
+      setFactureId("");
+      setMontant(0);
+      setMode("especes");
+      setDate(new Date().toISOString().slice(0, 10));
+      setReference("");
+      setNotes("");
+    }
+  }, [open]);
+
   const facturesOuvertes = factures.filter((f) => getStatutFacture(f.id) !== "payee");
   const facture = factures.find((f) => f.id === facture_id);
   const reste = facture ? facture.montant - getMontantPaye(facture.id) : 0;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(b) => {
-        onOpenChange(b);
-        if (b) {
-          setFactureId("");
-          setMontant(0);
-          setMode("especes");
-          setDate(new Date().toISOString().slice(0, 10));
-          setReference("");
-          setNotes("");
-        }
-      }}
-    >
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Nouveau paiement</DialogTitle>
           <DialogDescription>Enregistrer un règlement sur une facture.</DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!facture_id || montant <= 0 || !facture) {
               toast.error("Facture et montant requis");
               return;
             }
-            onSubmit({
-              facture_id,
-              eleve_id: facture.eleve_id || "",
-              montant,
-              mode_paiement,
-              date_paiement,
-              reference: reference || undefined,
-              notes: notes || undefined,
-            });
+            setIsSubmitting(true);
+            try {
+              await onSubmit({
+                facture_id,
+                eleve_id: facture.eleve_id || "",
+                montant,
+                mode_paiement,
+                date_paiement,
+                reference: reference || undefined,
+                notes: notes || undefined,
+              });
+            } catch (err) {
+              toast.error("Erreur technique");
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
-          className="grid gap-4"
+          className="grid gap-4 py-4"
         >
           <div>
             <Label>Facture *</Label>
-            <Select
-              value={facture_id}
-              onValueChange={(v) => {
-                setFactureId(v);
-              }}
-            >
+            <Select value={facture_id} onValueChange={setFactureId}>
               <SelectTrigger>
                 <SelectValue
-                  placeholder={
-                    facturesOuvertes.length === 0 ? "Aucune facture ouverte" : "Choisir une facture"
-                  }
+                  placeholder={facturesOuvertes.length === 0 ? "Aucune facture" : "Choisir"}
                 />
               </SelectTrigger>
               <SelectContent>
@@ -244,33 +265,22 @@ function PaiementDialog({
                   const r = f.montant - getMontantPaye(f.id);
                   return (
                     <SelectItem key={f.id} value={f.id}>
-                      {f.numero} — {e ? `${e.prenom} ${e.nom}` : "—"} (reste {formatXOF(r)})
+                      {f.numero} — {e ? `${e.prenom} ${e.nom}` : "—"} ({formatXOF(r)})
                     </SelectItem>
                   );
                 })}
               </SelectContent>
             </Select>
-            {facture && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Reste à payer :{" "}
-                <span className="font-semibold text-primary">{formatXOF(reste)}</span>
-              </p>
-            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="m">Tarif (FCFA) *</Label>
+              <Label htmlFor="m">Montant (FCFA) *</Label>
               <MoneyInput
                 id="m"
                 value={montant}
-                onValueChange={(value) => setMontant(value)}
-                placeholder={
-                  reste
-                    ? `Entrer le montant (reste ${formatXOF(reste)})`
-                    : "Entrer le montant"
-                }
+                onValueChange={setMontant}
                 min={0}
-                max={facture ? reste : 999999999999}
+                max={facture ? reste : 99999999}
                 required
               />
             </div>
@@ -284,7 +294,7 @@ function PaiementDialog({
                   <SelectItem value="especes">Espèces</SelectItem>
                   <SelectItem value="orange_money">Orange Money</SelectItem>
                   <SelectItem value="wave">Wave</SelectItem>
-                  <SelectItem value="virement">Virement bancaire</SelectItem>
+                  <SelectItem value="virement">Virement</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -306,27 +316,21 @@ function PaiementDialog({
                 id="ref"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                maxLength={50}
                 placeholder="N° transaction"
               />
             </div>
           </div>
-          <div>
-            <Label htmlFor="n">Notes</Label>
-            <Textarea
-              id="n"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              maxLength={300}
-              rows={2}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button type="submit" className="bg-gradient-primary transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]">
-              Enregistrer
+            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+              {isSubmitting ? "En cours..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </form>
