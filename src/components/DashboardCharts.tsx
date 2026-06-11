@@ -10,7 +10,15 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-3xl border border-slate-700/90 bg-card/95 p-3 text-sm text-foreground shadow-elegant">
@@ -28,7 +36,14 @@ export default function DashboardCharts({
 }: {
   enrollmentData: { name: string; count: number }[];
 }) {
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const memoData = useMemo(() => enrollmentData, [enrollmentData]);
+
+  if (!isMounted) return <div className="h-56 w-full bg-slate-900/20 animate-pulse rounded-2xl" />;
 
   return (
     <Card className="overflow-hidden rounded-[2rem] shadow-elegant border border-slate-700/70 bg-card/90 backdrop-blur-xl">

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 import { Plus, UserPlus, Trash2, Edit3 } from "lucide-react";
 import { useStore, type User } from "@/lib/store";
+import { type AuthUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -195,7 +196,7 @@ function UsersPage() {
             await updateUser(editing.id, payload);
             toast.success("Utilisateur mis à jour");
           } else {
-            await addUser(payload as any);
+            await addUser(payload as Omit<AuthUser, "id" | "created_at">);
             toast.success("Utilisateur créé");
           }
           setOpen(false);
@@ -260,7 +261,7 @@ function UserDialog({
               toast.error("Le mot de passe doit avoir au moins 6 caractères.");
               return;
             }
-            const payload: any = { name, email, role };
+            const payload: Partial<User> & { password?: string } = { name, email, role };
             if (!editing || password.trim().length > 0) {
               payload.password = password;
             }

@@ -2,8 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
-import { Plus, ClipboardCheck, Trash2, CheckCircle2, XCircle, Clock, Filter } from "lucide-react";
-import { useStore, labelResultat, type ResultatExamen, type Examen } from "@/lib/store";
+import {
+  Plus,
+  ClipboardCheck,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Filter,
+  MessageCircle,
+} from "lucide-react";
+import { useStore, labelResultat, type ResultatExamen, type Examen, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -85,6 +94,18 @@ function ExamensPage() {
   const handleOpen = useCallback(() => {
     setOpen(true);
   }, []);
+
+  const handleWhatsAppReminder = (ex: Examen, eleve: Eleve | null | undefined) => {
+    if (!eleve) return;
+    const cleanTel = eleve.telephone.replace(/\D/g, "");
+    const dateStr = new Date(ex.date_examen).toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    const message = `Bonjour ${eleve.prenom} ${eleve.nom}, c'est l'auto-école SARAH AUTO. Un petit rappel concernant votre examen de ${ex.type_examen} (${ex.type_permis}) prévu pour le ${dateStr}. N'oubliez pas vos documents originaux. Bon courage !`;
+    window.open(`https://wa.me/225${cleanTel}?text=${encodeURIComponent(message)}`, "_blank");
+  };
 
   return (
     <div className="space-y-8">
@@ -249,16 +270,29 @@ function ExamensPage() {
                       <Icon className="mr-1 h-3 w-3" /> {labelResultat(ex.resultat || "en_attente")}
                     </Badge>
                   </div>
-                  <p className="mt-3 text-sm">
-                    📅{" "}
-                    {isClient
-                      ? new Date(ex.date_examen).toLocaleDateString("fr-FR", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        })
-                      : "..."}
-                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-sm">
+                      📅{" "}
+                      {isClient
+                        ? new Date(ex.date_examen).toLocaleDateString("fr-FR", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                          })
+                        : "..."}
+                    </p>
+                    {ex.resultat === "en_attente" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-green-500 hover:bg-green-500/10"
+                        onClick={() => handleWhatsAppReminder(ex, eleve)}
+                        title="Rappeler via WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                   <div className="mt-4 flex gap-1.5">
                     {ex.resultat === "en_attente" && (
                       <>

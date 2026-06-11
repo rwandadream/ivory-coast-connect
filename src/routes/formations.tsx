@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useShallow } from "zustand/shallow";
-import { Plus, GraduationCap, Pencil, Trash2, Power } from "lucide-react";
+import { Plus, Car, Pencil, Trash2, Power } from "lucide-react";
 import { useStore, formatXOF, type Formation } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -59,78 +59,76 @@ function FormationsPage() {
   return (
     <div>
       <PageHeader
-        title="Formations"
-        description="Catalogue des formations proposées"
+        title="Tarifs des Permis"
+        description="Gérez les prix forfaitaires par type de permis (inclut Code + Conduite)"
         actions={
           <Button onClick={() => handleOpen()} className="bg-gradient-primary shadow-glow">
-            <Plus className="mr-1 h-4 w-4" /> Nouvelle formation
+            <Plus className="mr-1 h-4 w-4" /> Nouveau Permis
           </Button>
         }
       />
 
-      {formations.length === 0 ? (
-        <EmptyState
-          icon={GraduationCap}
-          title="Aucune formation"
-          description="Créez votre première formation."
-        />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {formations.map((f) => (
-            <Card
-              key={f.id}
-              className={`group p-5 transition-all hover:shadow-elegant ${!f.actif ? "opacity-60" : ""}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent text-accent-foreground">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {formations.map((f) => (
+          <Card
+            key={f.id}
+            className={`group relative overflow-hidden p-6 transition-all hover:shadow-elegant ${!f.actif ? "opacity-60" : ""}`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-foreground">
+                <Car className="h-5 w-5" />
+              </div>
+              <div className="flex items-center gap-2">
                 <Badge
                   variant={f.actif ? "default" : "secondary"}
                   className={f.actif ? "bg-success text-success-foreground" : ""}
                 >
-                  {f.actif ? "Active" : "Inactive"}
+                  {f.actif ? "Actif" : "Désactivé"}
                 </Badge>
-              </div>
-              <h3 className="mt-3 font-semibold">{f.nom}</h3>
-              {f.description && (
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{f.description}</p>
-              )}
-              <p className="mt-3 text-2xl font-bold text-primary">{formatXOF(f.prix)}</p>
-              <div className="mt-4 flex gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => handleOpen(f)}
-                >
-                  <Pencil className="mr-1 h-3 w-3" /> Modifier
-                </Button>
                 <Button
                   size="icon"
-                  variant="outline"
-                  onClick={() => updateFormation(f.id, { actif: !f.actif })}
-                >
-                  <Power className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="text-destructive"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => {
-                    if (confirm(`Supprimer la formation "${f.nom}" ?`)) {
+                    if (confirm(`Supprimer le ${f.nom} ?`)) {
                       deleteFormation(f.id);
-                      toast.success("Formation supprimée");
+                      toast.success("Catégorie supprimée");
                     }
                   }}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </Card>
-          ))}
-        </div>
-      )}
+            </div>
+
+            <h3 className="mt-4 text-xl font-bold">{f.nom}</h3>
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+              {f.description || "Forfait complet Code + Conduite"}
+            </p>
+
+            <div className="mt-6">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Tarif Forfaitaire
+              </p>
+              <p className="mt-1 text-3xl font-black text-primary">{formatXOF(f.prix)}</p>
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => handleOpen(f)}>
+                <Pencil className="mr-1 h-3.5 w-3.5" /> Modifier
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-9 w-9"
+                onClick={() => updateFormation(f.id, { actif: !f.actif })}
+              >
+                <Power className="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       <FormationDialog
         key={editingId || "new"}
@@ -143,10 +141,10 @@ function FormationsPage() {
         onSubmit={async (data) => {
           if (editingId) {
             await updateFormation(editingId, data);
-            toast.success("Formation mise à jour");
+            toast.success("Tarif mis à jour");
           } else {
             await addFormation(data);
-            toast.success("Formation créée");
+            toast.success("Nouveau type de permis créé");
           }
           handleClose();
         }}

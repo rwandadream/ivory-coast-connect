@@ -12,6 +12,12 @@ export type Database = {
           email: string | null;
           adresse: string | null;
           date_naissance: string | null;
+          lieu_naissance: string | null;
+          sexe: string | null;
+          nationalite: string | null;
+          type_piece: string | null;
+          num_piece: string | null;
+          code: string | null;
           type_permis: string;
           date_inscription: string | null;
           created_at: string;
@@ -24,6 +30,12 @@ export type Database = {
           email?: string | null;
           adresse?: string | null;
           date_naissance?: string | null;
+          lieu_naissance?: string | null;
+          sexe?: string | null;
+          nationalite?: string | null;
+          type_piece?: string | null;
+          num_piece?: string | null;
+          code?: string | null;
           type_permis: string;
           date_inscription?: string | null;
           created_at?: string;
@@ -36,6 +48,12 @@ export type Database = {
           email?: string | null;
           adresse?: string | null;
           date_naissance?: string | null;
+          lieu_naissance?: string | null;
+          sexe?: string | null;
+          nationalite?: string | null;
+          type_piece?: string | null;
+          num_piece?: string | null;
+          code?: string | null;
           type_permis?: string;
           date_inscription?: string | null;
           created_at?: string;

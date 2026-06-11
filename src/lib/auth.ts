@@ -1,3 +1,5 @@
+import type { Eleve } from "@/lib/store";
+
 export type AuthUser = {
   id: string;
   email: string;
@@ -8,12 +10,26 @@ export type AuthUser = {
 };
 
 const USERS_STORAGE_KEY = "sarah_auto_users";
-const SESSION_STORAGE_KEY = "sarah_auto_session";
+const SESSION_ID_KEY = "sarah_auto_session_id";
+const SESSION_TYPE_KEY = "sarah_auto_session_type";
 
 export function getStoredUsers(): AuthUser[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) ?? "[]") as AuthUser[];
+    const users = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) ?? "[]") as AuthUser[];
+    if (users.length === 0) {
+      // Create default admin if empty
+      const admin: AuthUser = {
+        id: "admin-default",
+        email: "admin@sarahauto.ci",
+        password: "admin",
+        name: "Admin Sarah",
+        role: "administrateur",
+        created_at: new Date().toISOString(),
+      };
+      return [admin];
+    }
+    return users;
   } catch {
     return [];
   }
@@ -24,19 +40,26 @@ export function saveStoredUsers(users: AuthUser[]) {
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 }
 
-export function getSessionEmail(): string | null {
+export function getSessionId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(SESSION_STORAGE_KEY);
+  return localStorage.getItem(SESSION_ID_KEY);
 }
 
-export function setSessionEmail(email: string) {
+export function getSessionType(): "admin" | "eleve" | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(SESSION_TYPE_KEY) as "admin" | "eleve" | null;
+}
+
+export function setSession(id: string, type: "admin" | "eleve") {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SESSION_STORAGE_KEY, email);
+  localStorage.setItem(SESSION_ID_KEY, id);
+  localStorage.setItem(SESSION_TYPE_KEY, type);
 }
 
 export function clearSession() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+  localStorage.removeItem(SESSION_ID_KEY);
+  localStorage.removeItem(SESSION_TYPE_KEY);
 }
 
 export function createUser(
@@ -78,4 +101,23 @@ export function validateUserCredentials(email: string, password: string) {
   }
 
   return { user };
+}
+
+export function validateStudentCredentials(
+  dossierCode: string,
+  telephone: string,
+  eleves: Eleve[],
+) {
+  const cleanInputTel = telephone.replace(/\D/g, "");
+  const eleve = eleves.find(
+    (e) =>
+      e.dossier_code.toLowerCase() === dossierCode.toLowerCase().trim() &&
+      e.telephone.replace(/\D/g, "").includes(cleanInputTel),
+  );
+
+  if (!eleve) {
+    return { error: "Identifiants invalides (Vérifiez le code dossier et le téléphone)." };
+  }
+
+  return { eleve };
 }

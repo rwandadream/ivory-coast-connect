@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
@@ -226,7 +226,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="mx-auto w-full max-w-full px-4 pb-12 pt-24 sm:px-6 lg:px-8 lg:pt-28 animate-fade-in-up bg-background text-foreground">
-          <Outlet />
+          {children}
         </div>
 
         <nav className="no-print fixed inset-x-0 bottom-0 z-20 flex justify-around border-t bg-card py-2 lg:hidden">

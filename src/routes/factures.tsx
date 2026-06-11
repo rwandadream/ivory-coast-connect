@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { Plus, FileText, Printer, Trash2, Eye, Download } from "lucide-react";
-import { useStore, formatXOF, formatTel } from "@/lib/store";
+import { Plus, FileText, Printer, Trash2, Eye, Download, MessageCircle } from "lucide-react";
+import { useStore, formatXOF, formatTel, type Facture, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,20 @@ function FacturesPage() {
       }),
     [factures, eleves, formations, inscriptions, getMontantPaye, getStatutFacture],
   );
+
+  const handleWhatsAppReminder = (item: {
+    eleve: Eleve | null;
+    facture: Facture;
+    paye: number;
+    statut: string;
+  }) => {
+    const { eleve, facture, paye, statut } = item;
+    if (!eleve) return;
+    const cleanTel = eleve.telephone.replace(/\D/g, "");
+    const reste = facture.montant - paye;
+    const message = `Bonjour ${eleve.prenom} ${eleve.nom}, c'est l'auto-école SARAH AUTO. Un petit rappel concernant votre facture ${facture.numero}. Montant total: ${formatXOF(facture.montant)}. Reste à payer: ${formatXOF(reste)}. Merci de régulariser dès que possible.`;
+    window.open(`https://wa.me/225${cleanTel}?text=${encodeURIComponent(message)}`, "_blank");
+  };
 
   const { facturesPayees, facturesPartielles, facturesNonPayees } = useMemo(
     () =>
@@ -201,6 +215,17 @@ function FacturesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
+                          {statut !== "payee" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-green-500 hover:bg-green-500/10"
+                              onClick={() => handleWhatsAppReminder(item)}
+                              title="Relancer sur WhatsApp"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"

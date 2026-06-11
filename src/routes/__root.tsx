@@ -16,7 +16,7 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { useStore } from "@/lib/store";
-import { getSessionEmail } from "@/lib/auth";
+import { getSessionId, getSessionType } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +82,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  ssr: false,
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -129,40 +130,50 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const fetchData = useStore(useShallow((s) => s.fetchData));
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionType, setSessionType] = useState<"admin" | "eleve" | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedEmail = getSessionEmail();
-    setSessionEmail(storedEmail);
+    setIsMounted(true);
+    const id = getSessionId();
+    const type = getSessionType();
+    setSessionId(id);
+    setSessionType(type);
     setIsAuthLoading(false);
 
     const publicRoutes = ["/login", "/signup"];
-    if (!storedEmail && !publicRoutes.includes(location.pathname)) {
+    const isPublic = publicRoutes.includes(location.pathname);
+
+    if (!id && !isPublic) {
       navigate({ to: "/login" });
-    }
-    if (storedEmail && publicRoutes.includes(location.pathname)) {
-      navigate({ to: "/" });
+    } else if (id) {
+      if (isPublic) {
+        navigate({ to: type === "admin" ? "/" : "/portal" });
+      } else if (type === "eleve" && !location.pathname.startsWith("/portal")) {
+        navigate({ to: "/portal" });
+      }
     }
   }, [location.pathname, navigate]);
 
   useEffect(() => {
-    if (sessionEmail) {
+    if (sessionId && isMounted) {
       fetchData();
     }
-  }, [sessionEmail, fetchData]);
+  }, [sessionId, fetchData, isMounted]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
       <QueryClientProvider client={queryClient}>
-        {isAuthLoading ? (
+        {!isMounted || isAuthLoading ? (
           <div className="flex min-h-screen items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : (
-          <RootLayout sessionEmail={sessionEmail}>
+          <RootLayout sessionId={sessionId} sessionType={sessionType}>
             <Outlet />
           </RootLayout>
         )}
@@ -174,16 +185,17 @@ function RootComponent() {
 
 function RootLayout({
   children,
-  sessionEmail,
+  sessionId,
+  sessionType,
 }: {
   children: ReactNode;
-  sessionEmail: string | null;
+  sessionId: string | null;
+  sessionType: "admin" | "eleve" | null;
 }) {
-  // Use a key to force re-mounting of the whole layout when session state changes
-  // This is safer than trying to reconcile two completely different structures
+  // Suppression de la key dynamique qui causait des erreurs d'unmount/mount brutaux
   return (
-    <div key={sessionEmail ? "auth" : "public"} className="contents">
-      {sessionEmail ? <AppShell>{children}</AppShell> : children}
+    <div className="contents">
+      {sessionId && sessionType === "admin" ? <AppShell>{children}</AppShell> : children}
     </div>
   );
 }

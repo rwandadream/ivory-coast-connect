@@ -59,7 +59,8 @@ export const generateInvoicePDF = async (data: {
     });
 
     // Payments Table
-    const lastY = (doc as any).lastAutoTable?.finalY || 110;
+    const lastY =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || 110;
     doc.setFontSize(12);
     doc.text("HISTORIQUE DES PAIEMENTS :", margin, lastY + 15);
 
@@ -81,7 +82,8 @@ export const generateInvoicePDF = async (data: {
     // Summary
     const totalPaid = data.paiements.reduce((sum, p) => sum + p.montant, 0);
     const remaining = Math.max(0, data.montant - totalPaid);
-    const summaryY = (doc as any).lastAutoTable?.finalY + 15;
+    const summaryY =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY + 15;
 
     doc.setFontSize(10);
     doc.text(`Total déjà payé :`, 130, summaryY);

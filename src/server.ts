@@ -7,7 +7,9 @@ import { renderErrorPage } from "./lib/error-page";
 function logToFile(msg: string) {
   try {
     fs.appendFileSync("server-debug.log", `${new Date().toISOString()} ${msg}\n`);
-  } catch (e) {}
+  } catch (e) {
+    // Ignore logging errors to avoid cascading failures
+  }
 }
 
 type ServerEntry = {

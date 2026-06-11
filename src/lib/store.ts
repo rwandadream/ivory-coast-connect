@@ -105,23 +105,25 @@ function getLocalData(): LocalData {
   }
 }
 
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
 function saveLocalData(data: LocalData) {
   if (typeof window === "undefined") return;
-  // Limit audit log to last 100 entries to prevent performance degradation
-  const optimizedData = {
-    ...data,
-    audit: data.audit.slice(0, 100),
-  };
 
-  // Use setTimeout to move the heavy JSON.stringify and localStorage write
-  // out of the immediate execution path, keeping the UI responsive.
-  setTimeout(() => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(() => {
+    const optimizedData = {
+      ...data,
+      audit: data.audit.slice(0, 100),
+    };
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(optimizedData));
     } catch (e) {
       console.error("Failed to save data to localStorage:", e);
     }
-  }, 0);
+  }, 500);
 }
 
 function generateId() {
@@ -226,6 +228,7 @@ export const useStore = create<State>((set, get) => ({
   isLoading: false,
 
   fetchData: async () => {
+    if (typeof window === "undefined") return;
     set({ isLoading: true });
     try {
       const data = getLocalData();
@@ -237,9 +240,9 @@ export const useStore = create<State>((set, get) => ({
           .reduce((sum, p) => sum + p.montant, 0);
         return {
           ...f,
-          montant_paye: (f as any).montant_paye ?? montant_paye,
+          montant_paye: f.montant_paye ?? montant_paye,
           statut:
-            (f as any).statut ??
+            f.statut ??
             (montant_paye >= f.montant ? "payee" : montant_paye > 0 ? "partielle" : "non_payee"),
         } as Facture;
       });
@@ -249,9 +252,20 @@ export const useStore = create<State>((set, get) => ({
           new Date(b.created_at ?? "1970-01-01").getTime() -
           new Date(a.created_at ?? "1970-01-01").getTime(),
       );
-      const formations = [...data.formations].sort((a, b) =>
-        (a.nom ?? "").localeCompare(b.nom ?? ""),
-      );
+      const formations = [...data.formations];
+      if (formations.length === 0) {
+        const defaultPermis = ["A", "B", "AB", "BCDE", "ABCD"];
+        const defaultFormations: Formation[] = defaultPermis.map((p) => ({
+          id: `permis-${p.toLowerCase()}`,
+          nom: `Permis ${p}`,
+          prix: p === "A" ? 80000 : 150000,
+          actif: true,
+          created_at: new Date().toISOString(),
+          description: `Formation complète (Code + Conduite) pour le permis ${p}.`,
+        }));
+        formations.push(...defaultFormations);
+      }
+      formations.sort((a, b) => (a.nom ?? "").localeCompare(b.nom ?? ""));
       const inscriptions = [...data.inscriptions];
       const paiements = [...data.paiements];
       const examens = [...data.examens].sort(
@@ -301,6 +315,12 @@ export const useStore = create<State>((set, get) => ({
       email: e.email ?? null,
       adresse: e.adresse ?? null,
       date_naissance: e.date_naissance ?? null,
+      lieu_naissance: e.lieu_naissance ?? null,
+      sexe: e.sexe ?? null,
+      nationalite: e.nationalite ?? null,
+      type_piece: e.type_piece ?? null,
+      num_piece: e.num_piece ?? null,
+      code: e.code ?? null,
       type_permis: e.type_permis,
       date_inscription: e.date_inscription ?? new Date().toISOString().slice(0, 10),
       created_at: e.created_at ?? new Date().toISOString(),

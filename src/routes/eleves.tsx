@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { Plus, Search, Pencil, Trash2, Users, Phone, Mail, Eye } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, Phone, Mail, Eye, Sparkles } from "lucide-react";
 import { useStore, formatXOF, formatTel, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TelInput } from "@/components/TelInput";
+import { CniScanner } from "@/components/CniScanner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -40,11 +41,17 @@ const TYPES_PERMIS = ["A", "B", "AB", "BCDE", "ABCD"];
 type EleveForm = {
   nom: string;
   prenom: string;
+  lieu_naissance: string;
+  sexe: string;
+  type_permis: string;
   telephone: string;
+  code: string;
+  nationalite: string;
+  type_piece: string;
+  num_piece: string;
+  date_naissance: string;
   email: string;
   adresse: string;
-  date_naissance: string;
-  type_permis: string;
   date_inscription: string;
 };
 
@@ -316,39 +323,59 @@ function EleveDialog({
   onSubmit: (data: EleveForm) => Promise<void>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [form, setForm] = useState<EleveForm>({
     nom: "",
     prenom: "",
+    lieu_naissance: "",
+    sexe: "M",
+    type_permis: "B",
     telephone: "",
+    code: "",
+    nationalite: "Ivoirienne",
+    type_piece: "CNI",
+    num_piece: "",
+    date_naissance: "",
     email: "",
     adresse: "",
-    date_naissance: "",
-    type_permis: "B",
     date_inscription: "",
   });
 
   useEffect(() => {
     if (open) {
+      setShowScanner(false);
       setForm(
         editing
           ? {
               nom: editing.nom,
               prenom: editing.prenom,
+              lieu_naissance: editing.lieu_naissance ?? "",
+              sexe: editing.sexe ?? "M",
+              type_permis: editing.type_permis,
               telephone: editing.telephone,
+              code: editing.code ?? "",
+              nationalite: editing.nationalite ?? "Ivoirienne",
+              type_piece: editing.type_piece ?? "CNI",
+              num_piece: editing.num_piece ?? "",
+              date_naissance: editing.date_naissance ?? "",
               email: editing.email ?? "",
               adresse: editing.adresse ?? "",
-              date_naissance: editing.date_naissance ?? "",
-              type_permis: editing.type_permis,
               date_inscription: editing.date_inscription ?? "",
             }
           : {
               nom: "",
               prenom: "",
+              lieu_naissance: "",
+              sexe: "M",
+              type_permis: "B",
               telephone: "",
+              code: "",
+              nationalite: "Ivoirienne",
+              type_piece: "CNI",
+              num_piece: "",
+              date_naissance: "",
               email: "",
               adresse: "",
-              date_naissance: "",
-              type_permis: "B",
               date_inscription: new Date().toISOString().slice(0, 10),
             },
       );
@@ -357,137 +384,235 @@ function EleveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>{editing ? "Modifier l'élève" : "Nouvel élève"}</DialogTitle>
-          <DialogDescription>Renseignez les informations de l'élève.</DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[80vh] overflow-y-auto px-1">
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!form.nom.trim() || !form.prenom.trim() || !form.telephone.trim()) {
-                toast.error("Nom, prénom et téléphone sont requis");
-                return;
-              }
-              setIsSubmitting(true);
-              try {
-                await onSubmit(form);
-              } catch (err) {
-                console.error("Submit error:", err);
-                toast.error("Une erreur est survenue lors de l'enregistrement.");
-              } finally {
-                setIsSubmitting(false);
-              }
-            }}
-            className="grid gap-4 py-4"
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="prenom">Prénom *</Label>
-                <Input
-                  id="prenom"
-                  value={form.prenom}
-                  onChange={(e) => setForm({ ...form, prenom: e.target.value })}
-                  required
-                  maxLength={50}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nom">Nom *</Label>
-                <Input
-                  id="nom"
-                  value={form.nom}
-                  onChange={(e) => setForm({ ...form, nom: e.target.value })}
-                  required
-                  maxLength={50}
-                />
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{editing ? "Modifier l'élève" : "Nouvel élève"}</DialogTitle>
+              <DialogDescription>Renseignez les informations de l'élève.</DialogDescription>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tel">Téléphone *</Label>
-              <TelInput
-                id="tel"
-                value={form.telephone}
-                onChange={(v) => setForm({ ...form, telephone: v })}
-                required
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email || ""}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  maxLength={120}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dn">Date de naissance</Label>
-                <Input
-                  id="dn"
-                  type="date"
-                  value={form.date_naissance || ""}
-                  onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="adresse">Adresse</Label>
-              <Input
-                id="adresse"
-                value={form.adresse || ""}
-                onChange={(e) => setForm({ ...form, adresse: e.target.value })}
-                maxLength={200}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Type de permis *</Label>
-                <Select
-                  value={form.type_permis}
-                  onValueChange={(v) => setForm({ ...form, type_permis: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TYPES_PERMIS.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="di">Date d'inscription *</Label>
-                <Input
-                  id="di"
-                  type="date"
-                  value={form.date_inscription || ""}
-                  onChange={(e) => setForm({ ...form, date_inscription: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter className="pt-4">
+            {!editing && !showScanner && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                size="sm"
+                className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => setShowScanner(true)}
               >
-                Annuler
+                <Sparkles className="h-4 w-4" /> Scanner CNI
               </Button>
-              <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
-                {isSubmitting ? "Chargement..." : editing ? "Mettre à jour" : "Enregistrer"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </div>
+            )}
+          </div>
+        </DialogHeader>
+
+        {showScanner ? (
+          <CniScanner
+            onClose={() => setShowScanner(false)}
+            onScanComplete={(data) => {
+              setForm((prev) => ({
+                ...prev,
+                nom: data.nom || prev.nom,
+                prenom: data.prenom || prev.prenom,
+                date_naissance: data.date_naissance || prev.date_naissance,
+              }));
+              setShowScanner(false);
+            }}
+          />
+        ) : (
+          <div className="max-h-[80vh] overflow-y-auto px-1">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!form.nom.trim() || !form.prenom.trim() || !form.telephone.trim()) {
+                  toast.error("Nom, prénom et téléphone sont requis");
+                  return;
+                }
+                setIsSubmitting(true);
+                try {
+                  await onSubmit(form);
+                } catch (err) {
+                  console.error("Submit error:", err);
+                  toast.error("Une erreur est survenue lors de l'enregistrement.");
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className="grid gap-6 py-4"
+            >
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary/70">
+                  Informations Générales
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="prenom">Prénoms *</Label>
+                    <Input
+                      id="prenom"
+                      value={form.prenom}
+                      onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+                      required
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nom">Nom *</Label>
+                    <Input
+                      id="nom"
+                      value={form.nom}
+                      onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                      required
+                      maxLength={50}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ln">Lieu de naissance (A)</Label>
+                    <Input
+                      id="ln"
+                      value={form.lieu_naissance}
+                      onChange={(e) => setForm({ ...form, lieu_naissance: e.target.value })}
+                      placeholder="Ex: Abidjan"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sexe *</Label>
+                    <Select value={form.sexe} onValueChange={(v) => setForm({ ...form, sexe: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="M">Masculin</SelectItem>
+                        <SelectItem value="F">Féminin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Catégorie (Permis) *</Label>
+                    <Select
+                      value={form.type_permis}
+                      onValueChange={(v) => setForm({ ...form, type_permis: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TYPES_PERMIS.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tel">Contact (Téléphone) *</Label>
+                    <TelInput
+                      id="tel"
+                      value={form.telephone}
+                      onChange={(v) => setForm({ ...form, telephone: v })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary/70">
+                  Identification
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="code">Code</Label>
+                    <Input
+                      id="code"
+                      value={form.code}
+                      onChange={(e) => setForm({ ...form, code: e.target.value })}
+                      placeholder="Code interne"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dn">Né(e) le *</Label>
+                    <Input
+                      id="dn"
+                      type="date"
+                      value={form.date_naissance}
+                      onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="nat">Nationalité</Label>
+                    <Input
+                      id="nat"
+                      value={form.nationalite}
+                      onChange={(e) => setForm({ ...form, nationalite: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type de pièce</Label>
+                    <Select
+                      value={form.type_piece}
+                      onValueChange={(v) => setForm({ ...form, type_piece: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CNI">CNI</SelectItem>
+                        <SelectItem value="Attestation">Attestation</SelectItem>
+                        <SelectItem value="Passeport">Passeport</SelectItem>
+                        <SelectItem value="Carte Consulaire">Carte Consulaire</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="np">N° pièce</Label>
+                    <Input
+                      id="np"
+                      value={form.num_piece}
+                      onChange={(e) => setForm({ ...form, num_piece: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="di">Date d'inscription *</Label>
+                    <Input
+                      id="di"
+                      type="date"
+                      value={form.date_inscription}
+                      onChange={(e) => setForm({ ...form, date_inscription: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Annuler
+                </Button>
+                <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+                  {isSubmitting ? "Chargement..." : editing ? "Mettre à jour" : "Enregistrer"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -555,21 +680,69 @@ function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                    Téléphone
+                    Contact (Téléphone)
                   </p>
                   <p className="mt-1 text-sm font-medium">{formatTel(eleve.telephone)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                    Email
+                    Lieu de naissance
                   </p>
-                  <p className="mt-1 text-sm font-medium">{eleve.email || "—"}</p>
+                  <p className="mt-1 text-sm font-medium">{eleve.lieu_naissance || "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                    Type de permis
+                    Catégorie (Permis)
                   </p>
                   <p className="mt-1 text-sm font-medium">{eleve.type_permis}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3 pt-4 border-t border-slate-800/50">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Code
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.code || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Nationalité
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.nationalite || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Né(e) le
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {eleve.date_naissance
+                      ? new Date(eleve.date_naissance).toLocaleDateString("fr-FR")
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3 pt-4 border-t border-slate-800/50">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Type de pièce
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.type_piece || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    N° pièce
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.num_piece || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Sexe
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {eleve.sexe === "M" ? "Masculin" : "Féminin"}
+                  </p>
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

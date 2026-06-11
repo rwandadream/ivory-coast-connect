@@ -113,11 +113,6 @@ function Dashboard() {
     })),
   );
 
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -285,19 +280,6 @@ function Dashboard() {
       console.error(error);
     }
   };
-
-  if (!isMounted) {
-    return (
-      <div className="space-y-8 pb-10">
-        <PageHeader title="Chargement..." description="Préparation de votre tableau de bord" />
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="h-32 animate-pulse bg-slate-900/50 border-slate-800" />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8 pb-10 bg-background text-foreground">

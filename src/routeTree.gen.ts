@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PortalRouteImport } from './routes/portal'
 import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as PaiementsRouteImport } from './routes/paiements'
 import { Route as MoniteursRouteImport } from './routes/moniteurs'
@@ -29,6 +30,11 @@ const UsersRoute = UsersRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlanningRoute = PlanningRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
   '/planning': typeof PlanningRoute
+  '/portal': typeof PortalRoute
   '/signup': typeof SignupRoute
   '/users': typeof UsersRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
   '/planning': typeof PlanningRoute
+  '/portal': typeof PortalRoute
   '/signup': typeof SignupRoute
   '/users': typeof UsersRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/moniteurs': typeof MoniteursRoute
   '/paiements': typeof PaiementsRoute
   '/planning': typeof PlanningRoute
+  '/portal': typeof PortalRoute
   '/signup': typeof SignupRoute
   '/users': typeof UsersRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/moniteurs'
     | '/paiements'
     | '/planning'
+    | '/portal'
     | '/signup'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/moniteurs'
     | '/paiements'
     | '/planning'
+    | '/portal'
     | '/signup'
     | '/users'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/moniteurs'
     | '/paiements'
     | '/planning'
+    | '/portal'
     | '/signup'
     | '/users'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   MoniteursRoute: typeof MoniteursRoute
   PaiementsRoute: typeof PaiementsRoute
   PlanningRoute: typeof PlanningRoute
+  PortalRoute: typeof PortalRoute
   SignupRoute: typeof SignupRoute
   UsersRoute: typeof UsersRoute
 }
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planning': {
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   MoniteursRoute: MoniteursRoute,
   PaiementsRoute: PaiementsRoute,
   PlanningRoute: PlanningRoute,
+  PortalRoute: PortalRoute,
   SignupRoute: SignupRoute,
   UsersRoute: UsersRoute,
 }
