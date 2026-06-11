@@ -164,19 +164,18 @@ function RootComponent() {
       fetchData();
     }
   }, [sessionId, fetchData, isMounted]);
-
   return (
     <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
       <QueryClientProvider client={queryClient}>
-        {!isMounted || isAuthLoading ? (
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : (
-          <RootLayout sessionId={sessionId} sessionType={sessionType}>
+        <RootLayout sessionId={sessionId} sessionType={sessionType}>
+          {!isMounted || isAuthLoading ? (
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : (
             <Outlet />
-          </RootLayout>
-        )}
+          )}
+        </RootLayout>
         <Toaster />
       </QueryClientProvider>
     </div>
@@ -192,10 +191,9 @@ function RootLayout({
   sessionId: string | null;
   sessionType: "admin" | "eleve" | null;
 }) {
-  // Suppression de la key dynamique qui causait des erreurs d'unmount/mount brutaux
   return (
-    <div className="contents">
-      {sessionId && sessionType === "admin" ? <AppShell>{children}</AppShell> : children}
-    </div>
+    <AppShell sessionId={sessionId} sessionType={sessionType}>
+      {children}
+    </AppShell>
   );
 }
