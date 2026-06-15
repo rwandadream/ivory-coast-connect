@@ -631,6 +631,139 @@ export interface Database {
         };
         Relationships: [];
       };
+      examen_sessions: {
+        Row: {
+          id: string;
+          numero_bordereau: string;
+          titre: string;
+          type_examen: string;
+          date_examen: string;
+          heure_examen: string;
+          centre: string;
+          lieu: string;
+          categorie: string;
+          statut: string;
+          inspecteur_id: string | null;
+          vehicule_id: string | null;
+          observations: string | null;
+          created_by: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          numero_bordereau: string;
+          titre: string;
+          type_examen: string;
+          date_examen: string;
+          heure_examen: string;
+          centre: string;
+          lieu: string;
+          categorie: string;
+          statut?: string;
+          inspecteur_id?: string | null;
+          vehicule_id?: string | null;
+          observations?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          numero_bordereau?: string;
+          titre?: string;
+          type_examen?: string;
+          date_examen?: string;
+          heure_examen?: string;
+          centre?: string;
+          lieu?: string;
+          categorie?: string;
+          statut?: string;
+          inspecteur_id?: string | null;
+          vehicule_id?: string | null;
+          observations?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "examen_sessions_inspecteur_id_fkey";
+            columns: ["inspecteur_id"];
+            isOneToOne: false;
+            referencedRelation: "inspecteurs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "examen_sessions_vehicule_id_fkey";
+            columns: ["vehicule_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicules";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "examen_sessions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      examen_session_eleves: {
+        Row: {
+          id: string;
+          session_id: string;
+          eleve_id: string;
+          nom_complet: string;
+          identifiant: string;
+          telephone: string;
+          categorie_permis: string;
+          resultat: string | null;
+          note: number | null;
+          observations: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          eleve_id: string;
+          nom_complet: string;
+          identifiant: string;
+          telephone: string;
+          categorie_permis: string;
+          resultat?: string | null;
+          note?: number | null;
+          observations?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          eleve_id?: string;
+          nom_complet?: string;
+          identifiant?: string;
+          telephone?: string;
+          categorie_permis?: string;
+          resultat?: string | null;
+          note?: number | null;
+          observations?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "examen_session_eleves_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "examen_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "examen_session_eleves_eleve_id_fkey";
+            columns: ["eleve_id"];
+            isOneToOne: false;
+            referencedRelation: "eleves";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -646,3 +779,5 @@ export interface Database {
     };
   };
 }
+
+export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T];

@@ -4,12 +4,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
-  role:
-    | "administrateur_principal"
-    | "administrateur_secondaire"
-    | "comptable"
-    | "moniteur"
-    | "conseiller";
+  role: "administrateur_principal" | "administrateur_secondaire" | "comptable" | "moniteur";
   created_at: string;
 };
 

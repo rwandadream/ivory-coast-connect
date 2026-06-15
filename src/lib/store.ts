@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 
-type Tables = Database["public"]["Tables"];
+export type Tables = Database["public"]["Tables"];
 
 export type Eleve = Tables["eleves"]["Row"] & {
   dossier_code: string;
@@ -36,6 +36,18 @@ export type Examen = Tables["examens"]["Row"] & {
   type_permis: string;
   inspecteur: string | null;
 };
+
+export type ExamenSessionStatus = "brouillon" | "programmée" | "en cours" | "terminée" | "annulée";
+
+export type ExamenSession = Tables["examen_sessions"]["Row"] & {
+  eleves_count?: number;
+  admis_count?: number;
+  echec_count?: number;
+  taux_reussite?: number;
+};
+
+export type ExamenSessionEleve = Tables["examen_session_eleves"]["Row"];
+
 export type Moniteur = Tables["moniteurs"]["Row"];
 export type Seance = Tables["seances"]["Row"];
 export type PlanningSession = Seance & {
@@ -56,12 +68,7 @@ export type User = {
   id: string;
   email: string;
   name: string;
-  role:
-    | "administrateur_principal"
-    | "administrateur_secondaire"
-    | "comptable"
-    | "moniteur"
-    | "conseiller";
+  role: "administrateur_principal" | "administrateur_secondaire" | "comptable" | "moniteur";
   created_at: string;
 };
 
@@ -75,6 +82,8 @@ type State = {
   factures: Facture[];
   paiements: Paiement[];
   examens: Examen[];
+  examen_sessions: ExamenSession[];
+  examen_session_eleves: ExamenSessionEleve[];
   moniteurs: Moniteur[];
   seances: Seance[];
   planning_sessions: PlanningSession[];
@@ -111,6 +120,14 @@ type State = {
   updateExamen: (id: string, e: Tables["examens"]["Update"]) => Promise<void>;
   deleteExamen: (id: string) => Promise<void>;
 
+  // Examen Sessions
+  addExamenSession: (s: Tables["examen_sessions"]["Insert"]) => Promise<void>;
+  updateExamenSession: (id: string, s: Tables["examen_sessions"]["Update"]) => Promise<void>;
+  deleteExamenSession: (id: string) => Promise<void>;
+  addElevesToSession: (sessionId: string, eleveIds: string[]) => Promise<void>;
+  updateSessionEleve: (id: string, data: Partial<ExamenSessionEleve>) => Promise<void>;
+  removeEleveFromSession: (id: string) => Promise<void>;
+
   // Moniteurs
   addMoniteur: (m: Tables["moniteurs"]["Insert"]) => Promise<void>;
   updateMoniteur: (id: string, m: Tables["moniteurs"]["Update"]) => Promise<void>;
@@ -132,7 +149,7 @@ type State = {
   deleteDepense: (id: string) => Promise<void>;
 
   // Users
-  addUser: (user: Partial<User>) => Promise<void>;
+  addUser: (user: Partial<User> & { password?: string }) => Promise<void>;
   updateUser: (id: string, data: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
 
@@ -158,6 +175,8 @@ export const useStore = create<State>((set, get) => ({
   factures: [],
   paiements: [],
   examens: [],
+  examen_sessions: [],
+  examen_session_eleves: [],
   moniteurs: [],
   seances: [],
   planning_sessions: [],
@@ -178,6 +197,8 @@ export const useStore = create<State>((set, get) => ({
         { data: factures },
         { data: paiements },
         { data: examens },
+        { data: examen_sessions },
+        { data: examen_session_eleves },
         { data: moniteurs },
         { data: seances },
         { data: vehicules },
@@ -193,6 +214,8 @@ export const useStore = create<State>((set, get) => ({
         supabase.from("factures").select("*"),
         supabase.from("paiements").select("*"),
         supabase.from("examens").select("*").order("date_examen", { ascending: false }),
+        supabase.from("examen_sessions").select("*").order("date_examen", { ascending: false }),
+        supabase.from("examen_session_eleves").select("*"),
         supabase.from("moniteurs").select("*").order("nom"),
         supabase.from("seances").select("*").order("date_seance", { ascending: false }),
         supabase.from("vehicules").select("*").order("immatriculation"),
@@ -250,6 +273,20 @@ export const useStore = create<State>((set, get) => ({
         } as Examen;
       });
 
+      const mappedSessions = (examen_sessions || []).map((s) => {
+        const sessionEleves = (examen_session_eleves || []).filter((e) => e.session_id === s.id);
+        const total = sessionEleves.length;
+        const admis = sessionEleves.filter((e) => e.resultat === "admis").length;
+        const echec = sessionEleves.filter((e) => e.resultat === "echec").length;
+        return {
+          ...s,
+          eleves_count: total,
+          admis_count: admis,
+          echec_count: echec,
+          taux_reussite: total > 0 ? (admis / total) * 100 : 0,
+        } as ExamenSession;
+      });
+
       const mappedPlanning = (seances || []).map((s) => {
         const eleve = mappedEleves.find((e) => e.id === s.eleve_id);
         return {
@@ -281,6 +318,8 @@ export const useStore = create<State>((set, get) => ({
         factures: mappedFactures,
         paiements: paiements || [],
         examens: mappedExamens,
+        examen_sessions: mappedSessions,
+        examen_session_eleves: examen_session_eleves || [],
         moniteurs: moniteurs || [],
         seances: seances || [],
         planning_sessions: mappedPlanning,
@@ -385,6 +424,50 @@ export const useStore = create<State>((set, get) => ({
     await get().fetchData();
   },
 
+  addExamenSession: async (s) => {
+    const user = await getCurrentUser();
+    const { error } = await supabase.from("examen_sessions").insert({ ...s, created_by: user?.id });
+    if (error) throw error;
+    await get().fetchData();
+  },
+  updateExamenSession: async (id, s) => {
+    const { error } = await supabase.from("examen_sessions").update(s).eq("id", id);
+    if (error) throw error;
+    await get().fetchData();
+  },
+  deleteExamenSession: async (id) => {
+    const { error } = await supabase.from("examen_sessions").delete().eq("id", id);
+    if (error) throw error;
+    await get().fetchData();
+  },
+  addElevesToSession: async (sessionId, eleveIds) => {
+    const { eleves } = get();
+    const payloads = eleveIds.map((eid) => {
+      const e = eleves.find((x) => x.id === eid);
+      return {
+        session_id: sessionId,
+        eleve_id: eid,
+        nom_complet: e ? `${e.prenom} ${e.nom}` : "Élève inconnu",
+        identifiant: e?.num_piece || e?.dossier_code || "N/A",
+        telephone: e?.telephone || "N/A",
+        categorie_permis: e?.type_permis || "B",
+      };
+    });
+    const { error } = await supabase.from("examen_session_eleves").insert(payloads);
+    if (error) throw error;
+    await get().fetchData();
+  },
+  updateSessionEleve: async (id, data) => {
+    const { error } = await supabase.from("examen_session_eleves").update(data).eq("id", id);
+    if (error) throw error;
+    await get().fetchData();
+  },
+  removeEleveFromSession: async (id) => {
+    const { error } = await supabase.from("examen_session_eleves").delete().eq("id", id);
+    if (error) throw error;
+    await get().fetchData();
+  },
+
   addMoniteur: async (m) => {
     const { error } = await supabase.from("moniteurs").insert(m);
     if (error) throw error;
@@ -451,7 +534,10 @@ export const useStore = create<State>((set, get) => ({
   },
 
   addUser: async (user) => {
-    const { data, error } = await supabase.auth.signUp({
+    if (!user.email || !user.password) {
+      throw new Error("Email and password are required to create a user.");
+    }
+    const { error } = await supabase.auth.signUp({
       email: user.email,
       password: user.password,
       options: { data: { name: user.name, role: user.role } },
