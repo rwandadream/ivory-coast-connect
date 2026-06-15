@@ -20,6 +20,9 @@ export type Database = {
           code: string | null;
           type_permis: string;
           date_inscription: string | null;
+          inspecteur: string | null;
+          est_parraine: boolean;
+          parrain_nom: string | null;
           created_at: string;
         };
         Insert: {
@@ -38,6 +41,9 @@ export type Database = {
           code?: string | null;
           type_permis: string;
           date_inscription?: string | null;
+          inspecteur?: string | null;
+          est_parraine?: boolean;
+          parrain_nom?: string | null;
           created_at?: string;
         };
         Update: {
@@ -56,6 +62,47 @@ export type Database = {
           code?: string | null;
           type_permis?: string;
           date_inscription?: string | null;
+          inspecteur?: string | null;
+          est_parraine?: boolean;
+          parrain_nom?: string | null;
+          created_at?: string;
+        };
+      };
+      depenses: {
+        Row: {
+          id: string;
+          categorie: string;
+          montant: number;
+          date: string;
+          description: string | null;
+          utilisateur_id: string;
+          mode_paiement: string;
+          justificatif_url: string | null;
+          vehicule_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          categorie: string;
+          montant: number;
+          date: string;
+          description?: string | null;
+          utilisateur_id: string;
+          mode_paiement: string;
+          justificatif_url?: string | null;
+          vehicule_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          categorie?: string;
+          montant?: number;
+          date?: string;
+          description?: string | null;
+          utilisateur_id?: string;
+          mode_paiement?: string;
+          justificatif_url?: string | null;
+          vehicule_id?: string | null;
           created_at?: string;
         };
       };
@@ -183,6 +230,7 @@ export type Database = {
           type_permis: string;
           type_examen: string;
           date_examen: string;
+          inspecteur: string | null;
           resultat: string | null;
           notes: string | null;
           created_at: string;
@@ -194,6 +242,7 @@ export type Database = {
           type_permis: string;
           type_examen: string;
           date_examen: string;
+          inspecteur?: string | null;
           resultat?: string | null;
           notes?: string | null;
           created_at?: string;
@@ -205,6 +254,7 @@ export type Database = {
           type_permis?: string;
           type_examen?: string;
           date_examen?: string;
+          inspecteur?: string | null;
           resultat?: string | null;
           notes?: string | null;
           created_at?: string;

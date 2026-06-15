@@ -127,7 +127,7 @@ function PaiementsPage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {labelModePaiement(p.mode_paiement)} ·{" "}
+                      {labelModePaiement(p.mode_paiement || "especes")} ·{" "}
                       {isClient
                         ? new Date(p.date_paiement || "").toLocaleDateString("fr-FR")
                         : "..."}

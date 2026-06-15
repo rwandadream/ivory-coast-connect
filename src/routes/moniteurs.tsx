@@ -208,7 +208,7 @@ function MoniteurDialog({
               telephone: editing.telephone,
               email: editing.email ?? "",
               specialite: editing.specialite ?? "",
-              statut: editing.statut,
+              statut: editing.statut || "Disponible",
             }
           : {
               nom: "",

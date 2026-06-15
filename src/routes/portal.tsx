@@ -15,6 +15,9 @@ import {
   AlertCircle,
   Phone,
   MessageCircle,
+  Image as ImageIcon,
+  User,
+  Mail,
 } from "lucide-react";
 import { useStore, formatXOF, formatTel } from "@/lib/store";
 import { clearSession, getSessionId } from "@/lib/auth";
@@ -24,7 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
-import { cn } from "@/lib/utils";
+import { cn, compressImage } from "@/lib/utils";
+import { Camera } from "lucide-react";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({ meta: [{ title: "Mon Espace — SARAH AUTO" }] }),
@@ -42,8 +46,9 @@ function StudentPortal() {
     paiements,
     examens,
     formations,
+    moniteurs,
     getStatutFacture,
-    getMontantPaye,
+    updateEleve,
   } = useStore(
     useShallow((s) => ({
       eleves: s.eleves,
@@ -52,19 +57,37 @@ function StudentPortal() {
       paiements: s.paiements,
       examens: s.examens,
       formations: s.formations,
+      moniteurs: s.moniteurs,
       getStatutFacture: s.getStatutFacture,
-      getMontantPaye: s.getMontantPaye,
+      updateEleve: s.updateEleve,
     })),
   );
 
   const student = useMemo(() => eleves.find((e) => e.id === studentId), [eleves, studentId]);
 
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && student) {
+      try {
+        const compressed = await compressImage(file, 400, 0.8); // Higher quality but smaller size for avatar
+        await updateEleve(student.id, { photo_profil: compressed });
+        toast.success("Photo de profil mise à jour !");
+      } catch (err) {
+        toast.error("Erreur lors de la mise à jour de la photo");
+      }
+    }
+  };
+
   const studentPlanning = useMemo(
     () =>
       planning_sessions
         .filter((s) => s.eleve_id === studentId)
+        .map((s) => ({
+          ...s,
+          moniteur: moniteurs.find((m) => m.id === s.moniteur_id),
+        }))
         .sort((a, b) => new Date(a.date_heure).getTime() - new Date(b.date_heure).getTime()),
-    [planning_sessions, studentId],
+    [planning_sessions, studentId, moniteurs],
   );
 
   const studentFactures = useMemo(
@@ -99,15 +122,13 @@ function StudentPortal() {
   const handleDownloadInvoice = async (factureId: string) => {
     const f = factures.find((x) => x.id === factureId);
     if (!f || !student) return;
-    const formation = formations.find((fr) => fr.id === f.inscription_id); // Inscription ID stores formation link usually or we need to find inscription first
-    // In our store, inscription has formation_id. Let's find it.
     const inscription = useStore.getState().inscriptions.find((i) => i.id === f.inscription_id);
     const formationData = formations.find((fr) => fr.id === inscription?.formation_id);
 
     try {
       await generateInvoicePDF({
         numero: f.numero,
-        date: f.date_emission || f.created_at,
+        date: f.date_emission || f.created_at || "",
         eleve: {
           nom: student.nom,
           prenom: student.prenom,
@@ -119,9 +140,9 @@ function StudentPortal() {
         paiements: paiements
           .filter((p) => p.facture_id === f.id)
           .map((p) => ({
-            date: p.date_paiement || p.created_at,
+            date: p.date_paiement || p.created_at || "",
             montant: p.montant,
-            mode: p.mode_paiement,
+            mode: p.mode_paiement || "especes",
           })),
       });
       toast.success("Facture téléchargée");
@@ -139,260 +160,316 @@ function StudentPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur-xl px-4 py-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-24">
+      {/* Dynamic Background Mesh */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header Area */}
+      <header className="relative z-10 px-6 pt-12 pb-8">
         <div className="mx-auto max-w-lg flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-primary text-white shadow-glow">
-              <Car className="h-5 w-5" />
+          <div className="flex items-center gap-4">
+            <div className="relative group cursor-pointer">
+              <label htmlFor="avatar-upload" className="cursor-pointer">
+                {student.photo_profil ? (
+                  <img
+                    src={student.photo_profil}
+                    className="h-16 w-16 rounded-3xl object-cover ring-2 ring-primary/30 shadow-glow transition-all group-hover:ring-primary group-hover:brightness-75"
+                    alt="Profile"
+                  />
+                ) : (
+                  <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-primary text-2xl font-black text-white shadow-glow transition-all group-hover:brightness-90">
+                    {student.prenom[0]}
+                  </div>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="h-6 w-6 text-white" />
+                </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfilePhotoChange}
+                />
+              </label>
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-slate-950 shadow-sm" />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                Espace Élève
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                Candidat Sarah Auto
               </p>
-              <p className="font-bold text-slate-100">
+              <h1 className="text-xl font-black text-white">
                 {student.prenom} {student.nom}
-              </p>
+              </h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <Badge variant="outline" className="border-white/10 text-white/50 text-[10px]">
+                  {student.dossier_code}
+                </Badge>
+              </div>
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={handleLogout}
-            className="text-slate-400 hover:text-red-400"
+            className="rounded-2xl border-white/5 bg-white/5 text-white/50 hover:text-red-400 hover:bg-red-400/10 transition-all"
           >
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg p-4 space-y-6">
-        {/* Statut Card */}
-        <Card className="border-primary/20 bg-primary/5 shadow-glow-sm overflow-hidden rounded-[2rem]">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-tighter">
-                  Code Dossier
-                </p>
-                <p className="text-2xl font-black tracking-tighter">{student.dossier_code}</p>
-              </div>
-              <Badge className="bg-primary text-primary-foreground font-bold px-3 py-1">
-                {student.statut.replace("_", " ")}
-              </Badge>
-            </div>
-            <div className="mt-4 pt-4 border-t border-primary/10 flex items-center gap-2 text-sm text-slate-300">
-              <Phone className="h-3.5 w-3.5 text-primary" />
-              <span>{formatTel(student.telephone)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Summary */}
+      <main className="relative z-10 mx-auto max-w-lg px-6 space-y-8">
+        {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-slate-900/50 border-slate-800 rounded-3xl">
-            <CardContent className="p-4">
-              <p className="text-[10px] uppercase font-bold text-slate-500">Payé</p>
-              <p className="text-xl font-bold text-green-400 mt-1">{formatXOF(totalPaye)}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-900/50 border-slate-800 rounded-3xl">
-            <CardContent className="p-4">
-              <p className="text-[10px] uppercase font-bold text-slate-500">Reste</p>
-              <p className="text-xl font-bold text-orange-400 mt-1">{formatXOF(resteAPayer)}</p>
-            </CardContent>
-          </Card>
+          <div className="glass rounded-[2rem] p-5 border-white/5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
+              Formation
+            </p>
+            <p className="text-xl font-black text-white mt-1">Permis {student.type_permis}</p>
+            <div className="mt-4 flex items-center gap-2">
+              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-primary w-[65%]" />
+              </div>
+              <span className="text-[10px] font-bold text-white/40">65%</span>
+            </div>
+          </div>
+          <div className="glass rounded-[2rem] p-5 border-white/5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Compte</p>
+            <p className="text-xl font-black text-primary mt-1">{formatXOF(resteAPayer)}</p>
+            <p className="text-[10px] font-bold text-white/40 mt-1 uppercase">Reste à solder</p>
+          </div>
         </div>
 
-        {/* Main Content Tabs */}
+        {/* Navigation Tabs */}
         <Tabs defaultValue="planning" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 rounded-2xl p-1 h-12 border border-slate-800">
+          <TabsList className="grid w-full grid-cols-2 bg-white/5 rounded-[2rem] p-1.5 h-14 border border-white/5 backdrop-blur-md">
             <TabsTrigger
               value="planning"
-              className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white"
+              className="rounded-3xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-glow font-bold"
             >
-              <CalendarDays className="h-4 w-4 mr-2 hidden sm:block" />
+              <CalendarDays className="h-4 w-4 mr-2" />
               Planning
             </TabsTrigger>
             <TabsTrigger
-              value="finances"
-              className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white"
+              value="infos"
+              className="rounded-3xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-glow font-bold"
             >
-              <Wallet className="h-4 w-4 mr-2 hidden sm:block" />
-              Finances
-            </TabsTrigger>
-            <TabsTrigger
-              value="resultats"
-              className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white"
-            >
-              <ClipboardCheck className="h-4 w-4 mr-2 hidden sm:block" />
-              Résultats
+              <User className="h-4 w-4 mr-2" />
+              Mes Infos
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="planning" className="mt-6 space-y-4">
+          {/* Planning Content */}
+          <TabsContent value="planning" className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Mes Séances</h3>
-              <Badge variant="outline" className="border-slate-700 text-slate-400">
-                {studentPlanning.length} séance(s)
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
+                Mes Cours & Séances
+              </h2>
+              <Badge className="bg-white/5 text-white/40 border-none">
+                {studentPlanning.length} Séances
               </Badge>
             </div>
 
             {studentPlanning.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 italic border-2 border-dashed border-slate-800 rounded-3xl">
-                Aucune séance planifiée.
+              <div className="text-center py-16 glass rounded-[2.5rem] border-dashed border-white/10">
+                <Clock className="h-10 w-10 text-white/10 mx-auto mb-4" />
+                <p className="text-sm text-white/30 font-bold uppercase tracking-widest">
+                  Aucune séance prévue
+                </p>
               </div>
             ) : (
-              studentPlanning.map((session) => (
-                <Card
-                  key={session.id}
-                  className="bg-slate-900/50 border-slate-800 rounded-[1.5rem] hover:border-primary/30 transition-all"
-                >
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-800 text-primary">
-                      <Clock className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate">{session.titre}</p>
-                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                        {new Date(session.date_heure).toLocaleDateString("fr-FR", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        })}
-                      </p>
-                      <p className="text-xs text-slate-500 font-medium mt-1 uppercase tracking-tighter">
-                        {new Date(session.date_heure).toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        • {session.duree_minutes} min
-                      </p>
-                    </div>
-                    {session.lieu && (
+              <div className="space-y-4">
+                {studentPlanning.map((session) => (
+                  <div
+                    key={session.id}
+                    className="group glass p-5 rounded-[2.5rem] border-white/5 hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+                          <Car className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-black text-white text-lg">{session.titre}</p>
+                          <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                            {new Date(session.date_heure).toLocaleDateString("fr-FR", {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </p>
+                        </div>
+                      </div>
                       <div className="text-right">
-                        <Badge
-                          variant="secondary"
-                          className="bg-slate-800 text-slate-300 text-[10px]"
-                        >
-                          <MapPin className="h-3 w-3 mr-1" /> {session.lieu}
-                        </Badge>
+                        <p className="text-lg font-black text-white">
+                          {new Date(session.date_heure).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                          {session.duree_minutes} min
+                        </p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="finances" className="mt-6 space-y-4">
-            <h3 className="text-lg font-bold">Mes Factures</h3>
-            {studentFactures.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 italic border-2 border-dashed border-slate-800 rounded-3xl">
-                Aucune facture enregistrée.
-              </div>
-            ) : (
-              studentFactures.map((f) => {
-                const statut = getStatutFacture(f.id);
-                return (
-                  <Card key={f.id} className="bg-slate-900/50 border-slate-800 rounded-[1.5rem]">
-                    <CardContent className="p-4 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-500">{f.numero}</p>
-                        <p className="text-lg font-bold mt-1">{formatXOF(f.montant)}</p>
-                        <Badge
-                          className={cn(
-                            "mt-2 font-bold text-[10px] uppercase",
-                            statut === "payee"
-                              ? "bg-green-500/20 text-green-400"
-                              : statut === "partielle"
-                                ? "bg-orange-500/20 text-orange-400"
-                                : "bg-red-500/20 text-red-400",
-                          )}
-                        >
-                          {statut.replace("_", " ")}
-                        </Badge>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="rounded-2xl border-slate-700 hover:bg-primary hover:text-white"
-                        onClick={() => handleDownloadInvoice(f.id)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            )}
-          </TabsContent>
-
-          <TabsContent value="resultats" className="mt-6 space-y-4">
-            <h3 className="text-lg font-bold">Mes Examens</h3>
-            {studentExamens.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 italic border-2 border-dashed border-slate-800 rounded-3xl">
-                Aucun examen enregistré.
-              </div>
-            ) : (
-              studentExamens.map((x) => (
-                <Card key={x.id} className="bg-slate-900/50 border-slate-800 rounded-[1.5rem]">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div
-                      className={cn(
-                        "grid h-12 w-12 place-items-center rounded-2xl",
-                        x.resultat === "admis"
-                          ? "bg-green-500/20 text-green-400"
-                          : x.resultat === "echec"
-                            ? "bg-red-500/20 text-red-400"
-                            : "bg-slate-800 text-slate-400",
-                      )}
-                    >
-                      {x.resultat === "admis" ? (
-                        <CheckCircle2 className="h-6 w-6" />
-                      ) : x.resultat === "echec" ? (
-                        <AlertCircle className="h-6 w-6" />
-                      ) : (
-                        <Clock className="h-6 w-6" />
-                      )}
                     </div>
-                    <div className="flex-1">
-                      <p className="font-bold">{x.type_examen}</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Le {new Date(x.date_examen).toLocaleDateString("fr-FR")}
+
+                    <div className="mt-6 flex items-center justify-between pt-5 border-t border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-xl bg-slate-800 border border-white/10 overflow-hidden">
+                          <img
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session.moniteur?.nom || "User"}`}
+                            alt="Moniteur"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-tighter text-white/30">
+                            Moniteur
+                          </p>
+                          <p className="text-xs font-bold text-white">
+                            {session.moniteur?.prenom || "À affecter"} {session.moniteur?.nom || ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {session.lieu && (
+                          <Badge
+                            variant="outline"
+                            className="border-white/5 text-[10px] text-white/40"
+                          >
+                            <MapPin className="h-3 w-3 mr-1" /> {session.lieu}
+                          </Badge>
+                        )}
+                        <Badge className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase px-3">
+                          {session.type}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Informations Content */}
+          <TabsContent value="infos" className="mt-8 space-y-6">
+            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/50 px-2">
+              Détails de mon profil
+            </h2>
+
+            <div className="grid gap-4">
+              <div className="glass p-6 rounded-[2.5rem] border-white/5 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center text-primary">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                      Nom complet
+                    </p>
+                    <p className="font-bold text-white">
+                      {student.prenom} {student.nom}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center text-primary">
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                      Téléphone
+                    </p>
+                    <p className="font-bold text-white">{formatTel(student.telephone)}</p>
+                  </div>
+                </div>
+
+                {student.email && (
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center text-primary">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                        Email
                       </p>
+                      <p className="font-bold text-white">{student.email}</p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "font-bold uppercase text-[10px]",
-                        x.resultat === "admis"
-                          ? "border-green-500/50 text-green-400"
-                          : x.resultat === "echec"
-                            ? "border-red-500/50 text-red-400"
-                            : "border-slate-700 text-slate-500",
-                      )}
-                    >
-                      {x.resultat ? x.resultat.replace("_", " ") : "En attente"}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center text-primary">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                      Adresse
+                    </p>
+                    <p className="font-bold text-white">{student.adresse || "Non renseignée"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass p-6 rounded-[2.5rem] border-white/5 space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  Identification
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-tighter">
+                      Né(e) le
+                    </p>
+                    <p className="text-sm font-bold text-white">
+                      {student.date_naissance
+                        ? new Date(student.date_naissance).toLocaleDateString()
+                        : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-tighter">
+                      Sexe
+                    </p>
+                    <p className="text-sm font-bold text-white">
+                      {student.sexe === "M" ? "Masculin" : "Féminin"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-tighter">
+                      Type de pièce
+                    </p>
+                    <p className="text-sm font-bold text-white">{student.type_piece || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white/30 tracking-tighter">
+                      N° de pièce
+                    </p>
+                    <p className="text-sm font-bold text-white">{student.num_piece || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
 
-      {/* Floating Support Button */}
-      <div className="fixed bottom-6 right-6">
+      {/* Floating Action Button */}
+      <div className="fixed bottom-8 right-8 z-50">
         <a
           href={`https://wa.me/2250707070707?text=Bonjour,%20je%20suis%20l'élève%20${student.prenom}%20${student.nom}%20(Code:%20${student.dossier_code}).%20J'ai%20une%20question.`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 hover:bg-green-600 shadow-glow text-white transition-transform duration-300 hover:scale-105"
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500 hover:bg-green-600 shadow-glow text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
         >
-          <MessageCircle className="h-6 w-6" />
+          <MessageCircle className="h-7 w-7 transition-transform group-hover:rotate-12" />
+          <div className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full border-4 border-slate-950 flex items-center justify-center text-[8px] font-black">
+            1
+          </div>
         </a>
       </div>
     </div>

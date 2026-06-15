@@ -1,7 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { Plus, Search, Pencil, Trash2, Users, Phone, Mail, Eye, Sparkles } from "lucide-react";
+import { compressImage } from "@/lib/utils";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Users,
+  Phone,
+  Mail,
+  Eye,
+  Sparkles,
+  Image as ImageIcon,
+  Upload,
+  X,
+} from "lucide-react";
 import { useStore, formatXOF, formatTel, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -53,6 +67,11 @@ type EleveForm = {
   email: string;
   adresse: string;
   date_inscription: string;
+  photo_cni?: string | null;
+  photo_profil?: string | null;
+  inspecteur?: string;
+  est_parraine?: boolean;
+  parrain_nom?: string;
 };
 
 function ElevesPage() {
@@ -107,7 +126,7 @@ function ElevesPage() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const monthlyCount = eleves.filter(
-      (e) => new Date(e.created_at).getMonth() === currentMonth,
+      (e) => new Date(e.created_at || "").getMonth() === currentMonth,
     ).length;
 
     return { topPermis, monthlyCount };
@@ -138,32 +157,36 @@ function ElevesPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <Card className="border-border bg-card/70 shadow-sm">
-          <CardHeader>
-            <CardTitle>Total</CardTitle>
-            <CardDescription>Élèves enregistrés</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Total</CardTitle>
+            <CardDescription className="text-[10px] sm:text-xs">Élèves enregistrés</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{eleves.length}</p>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <p className="text-2xl sm:text-3xl font-bold">{eleves.length}</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
-          <CardHeader>
-            <CardTitle>Nouveau ce mois</CardTitle>
-            <CardDescription>Inscrits ce mois-ci</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Nouveau ce mois</CardTitle>
+            <CardDescription className="text-[10px] sm:text-xs">
+              Inscrits ce mois-ci
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.monthlyCount}</p>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <p className="text-2xl sm:text-3xl font-bold">{stats.monthlyCount}</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
-          <CardHeader>
-            <CardTitle>Permis le plus demandé</CardTitle>
-            <CardDescription>Préférence actuelle</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Permis le plus demandé</CardTitle>
+            <CardDescription className="text-[10px] sm:text-xs">
+              Préférence actuelle
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.topPermis}</p>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <p className="text-2xl sm:text-3xl font-bold">{stats.topPermis}</p>
           </CardContent>
         </Card>
         <div className="hidden xl:block" />
@@ -198,36 +221,36 @@ function ElevesPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
             {filtered.map((e) => (
-              <Card key={e.id} className="group p-4 transition-all hover:shadow-elegant">
-                <div className="flex items-start gap-3">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-primary font-semibold text-primary-foreground uppercase">
+              <Card key={e.id} className="group p-3 sm:p-4 transition-all hover:shadow-elegant">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs sm:text-sm font-semibold text-primary-foreground uppercase">
                     {(e.prenom?.[0] || "") + (e.nom?.[0] || "")}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between gap-1 sm:gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-100">
+                        <p className="truncate text-sm sm:text-base font-semibold text-foreground">
                           {e.prenom} {e.nom}
                         </p>
-                        <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                        <Badge variant="secondary" className="mt-0.5 text-[9px] sm:text-[10px]">
                           {e.type_permis}
                         </Badge>
                       </div>
-                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex gap-0.5 sm:gap-1 lg:opacity-0 transition-opacity lg:group-hover:opacity-100">
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => handleOpen(e)}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 text-destructive"
+                          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
                           onClick={() => {
                             if (
                               confirm(
@@ -339,6 +362,11 @@ function EleveDialog({
     email: "",
     adresse: "",
     date_inscription: "",
+    photo_cni: null,
+    photo_profil: null,
+    inspecteur: "",
+    est_parraine: false,
+    parrain_nom: "",
   });
 
   useEffect(() => {
@@ -361,6 +389,11 @@ function EleveDialog({
               email: editing.email ?? "",
               adresse: editing.adresse ?? "",
               date_inscription: editing.date_inscription ?? "",
+              photo_cni: editing.photo_cni ?? null,
+              photo_profil: editing.photo_profil ?? null,
+              inspecteur: editing.inspecteur ?? "",
+              est_parraine: editing.est_parraine ?? false,
+              parrain_nom: editing.parrain_nom ?? "",
             }
           : {
               nom: "",
@@ -377,10 +410,31 @@ function EleveDialog({
               email: "",
               adresse: "",
               date_inscription: new Date().toISOString().slice(0, 10),
+              photo_cni: null,
+              photo_profil: null,
+              inspecteur: "",
+              est_parraine: false,
+              parrain_nom: "",
             },
       );
     }
   }, [open, editing]);
+
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "photo_cni" | "photo_profil",
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressImage(file);
+        setForm((prev) => ({ ...prev, [field]: compressed }));
+        toast.success("Image optimisée et chargée");
+      } catch (err) {
+        toast.error("Erreur lors du traitement de l'image");
+      }
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -597,6 +651,89 @@ function EleveDialog({
                 </div>
               </div>
 
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary/70">
+                  Suivi & Parrainage
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="inspecteur">Inspecteur</Label>
+                    <Input
+                      id="inspecteur"
+                      value={form.inspecteur}
+                      onChange={(e) => setForm({ ...form, inspecteur: e.target.value })}
+                      placeholder="Nom de l'inspecteur"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Élève parrainé ?</Label>
+                    <Select
+                      value={form.est_parraine ? "OUI" : "NON"}
+                      onValueChange={(v) => setForm({ ...form, est_parraine: v === "OUI" })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NON">Non</SelectItem>
+                        <SelectItem value="OUI">Oui</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {form.est_parraine && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <Label htmlFor="parrain">Parrainé par</Label>
+                    <Input
+                      id="parrain"
+                      value={form.parrain_nom}
+                      onChange={(e) => setForm({ ...form, parrain_nom: e.target.value })}
+                      placeholder="Nom du parrain"
+                      required={form.est_parraine}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary/70">
+                  Photos & Documents
+                </h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <Label>Carte d'identité (CNI)</Label>
+                    {form.photo_cni ? (
+                      <div className="relative aspect-video rounded-2xl overflow-hidden border border-slate-700 bg-slate-900">
+                        <img
+                          src={form.photo_cni}
+                          alt="CNI"
+                          className="h-full w-full object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, photo_cni: null }))}
+                          className="absolute right-2 top-2 rounded-full bg-red-500/80 p-1 text-white hover:bg-red-500 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex aspect-video cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/50 transition-all hover:bg-slate-900 hover:border-primary/50">
+                        <Upload className="h-6 w-6 text-slate-500" />
+                        <span className="text-xs text-slate-400">Cliquez pour charger la CNI</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, "photo_cni")}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <DialogFooter className="pt-6">
                 <Button
                   type="button"
@@ -745,6 +882,25 @@ function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: 
                   </p>
                 </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-3 pt-4 border-t border-slate-800/50">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Inspecteur
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{eleve.inspecteur || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    Parrainage
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {eleve.est_parraine ? `Parrainé par ${eleve.parrain_nom}` : "Non parrainé"}
+                  </p>
+                </div>
+                <div />
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
                   <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/shallow";
-import { Plus, UserPlus, Trash2, Edit3 } from "lucide-react";
+import { Plus, UserPlus, Trash2, Edit3, ShieldAlert } from "lucide-react";
 import { useStore, type User } from "@/lib/store";
-import { type AuthUser } from "@/lib/auth";
+import { type AuthUser, getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,21 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const ROLES = ["administrateur", "comptable", "moniteur", "conseiller"] as const;
+const ROLES = [
+  "administrateur_principal",
+  "administrateur_secondaire",
+  "comptable",
+  "moniteur",
+] as const;
 
 type Role = (typeof ROLES)[number];
+
+const ROLE_LABELS: Record<string, string> = {
+  administrateur_principal: "Admin Principal",
+  administrateur_secondaire: "Admin Secondaire",
+  comptable: "Comptable",
+  moniteur: "Moniteur",
+};
 
 export const Route = createFileRoute("/users")({
   head: () => ({ meta: [{ title: "Utilisateurs — SARAH AUTO" }] }),
@@ -49,6 +61,13 @@ function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [search, setSearch] = useState("");
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  useEffect(() => {
+    getCurrentUser().then(setCurrentUser);
+  }, []);
+
+  const isPrincipal = currentUser?.role === "administrateur_principal";
+
   const filteredUsers = users.filter((user) => {
     const q = search.toLowerCase();
     return (
@@ -64,15 +83,29 @@ function UsersPage() {
     }
   }, [open]);
 
+  if (!isPrincipal && currentUser?.role !== "administrateur_secondaire") {
+    return (
+      <div className="flex h-[70vh] items-center justify-center">
+        <EmptyState
+          icon={ShieldAlert}
+          title="Accès restreint"
+          description="Vous n'avez pas les permissions nécessaires pour gérer les utilisateurs."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
         title="Gestion des utilisateurs"
         description="Créez des comptes, ajustez les rôles et contrôlez l’accès à la plateforme."
         actions={
-          <Button className="bg-gradient-primary shadow-glow" onClick={() => setOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" /> Nouvel utilisateur
-          </Button>
+          isPrincipal && (
+            <Button className="bg-gradient-primary shadow-glow" onClick={() => setOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Nouvel utilisateur
+            </Button>
+          )
         }
       />
 
@@ -88,35 +121,35 @@ function UsersPage() {
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
           <CardHeader>
-            <CardTitle>Administrateurs</CardTitle>
+            <CardTitle>Admin Principal</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">
-              {users.filter((u) => u.role === "administrateur").length}
+              {users.filter((u) => u.role === "administrateur_principal").length}
             </p>
-            <p className="text-sm text-muted-foreground">Accès complet</p>
+            <p className="text-sm text-muted-foreground">Contrôle total</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
           <CardHeader>
-            <CardTitle>Moniteurs</CardTitle>
+            <CardTitle>Admin Secondaire</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">
-              {users.filter((u) => u.role === "moniteur").length}
+              {users.filter((u) => u.role === "administrateur_secondaire").length}
             </p>
-            <p className="text-sm text-muted-foreground">Gestion des sessions</p>
+            <p className="text-sm text-muted-foreground">Accès limité</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card/70 shadow-sm">
           <CardHeader>
-            <CardTitle>Conseillers</CardTitle>
+            <CardTitle>Autres</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">
-              {users.filter((u) => u.role === "conseiller").length}
+              {users.filter((u) => !u.role.startsWith("administrateur")).length}
             </p>
-            <p className="text-sm text-muted-foreground">Suivi commercial</p>
+            <p className="text-sm text-muted-foreground">Rôles spécifiques</p>
           </CardContent>
         </Card>
       </div>
@@ -150,36 +183,36 @@ function UsersPage() {
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                 </div>
                 <div className="rounded-full border border-slate-800 bg-slate-900/80 px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {user.role}
+                  {ROLE_LABELS[user.role] || user.role}
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>Créé le {new Date(user.created_at).toLocaleDateString("fr-FR")}</span>
                 <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setEditing(user);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => {
-                      if (confirm(`Supprimer le compte de ${user.name} ?`)) {
-                        deleteUser(user.id);
-                        toast.success("Utilisateur supprimé");
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {isPrincipal && (
+                    <>
+                      <button
+                        className="h-8 w-8 inline-flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                        onClick={() => {
+                          setEditing(user);
+                          setOpen(true);
+                        }}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="h-8 w-8 inline-flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 text-destructive rounded-md transition-colors"
+                        onClick={() => {
+                          if (confirm(`Supprimer le compte de ${user.name} ?`)) {
+                            deleteUser(user.id);
+                            toast.success("Utilisateur supprimé");
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </Card>
@@ -187,21 +220,23 @@ function UsersPage() {
         </div>
       )}
 
-      <UserDialog
-        open={open}
-        editing={editing}
-        onOpenChange={setOpen}
-        onSubmit={async (payload) => {
-          if (editing) {
-            await updateUser(editing.id, payload);
-            toast.success("Utilisateur mis à jour");
-          } else {
-            await addUser(payload as Omit<AuthUser, "id" | "created_at">);
-            toast.success("Utilisateur créé");
-          }
-          setOpen(false);
-        }}
-      />
+      {isPrincipal && (
+        <UserDialog
+          open={open}
+          editing={editing}
+          onOpenChange={setOpen}
+          onSubmit={async (payload) => {
+            if (editing) {
+              await updateUser(editing.id, payload);
+              toast.success("Utilisateur mis à jour");
+            } else {
+              await addUser(payload as Omit<AuthUser, "id" | "created_at">);
+              toast.success("Utilisateur créé");
+            }
+            setOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -219,7 +254,7 @@ function UserDialog({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("administrateur");
+  const [role, setRole] = useState<Role>("administrateur_principal");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -233,7 +268,7 @@ function UserDialog({
       } else {
         setName("");
         setEmail("");
-        setRole("administrateur");
+        setRole("administrateur_principal");
         setPassword("");
       }
     }
@@ -300,7 +335,7 @@ function UserDialog({
                 <SelectContent>
                   {ROLES.map((roleOption) => (
                     <SelectItem key={roleOption} value={roleOption}>
-                      {roleOption}
+                      {ROLE_LABELS[roleOption]}
                     </SelectItem>
                   ))}
                 </SelectContent>

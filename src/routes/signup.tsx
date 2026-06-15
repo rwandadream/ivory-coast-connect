@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, ArrowRight, Car } from "lucide-react";
-import { createUser } from "@/lib/auth";
+import { signUp } from "@/lib/auth";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -22,9 +22,9 @@ function SignupPage() {
     setIsLoading(true);
 
     try {
-      const result = createUser(email, password);
-      if (result.error) {
-        toast.error("Erreur d'inscription : " + result.error);
+      const { error } = await signUp(email, password, email.split("@")[0]);
+      if (error) {
+        toast.error("Erreur d'inscription : " + error.message);
       } else {
         toast.success("Compte créé ! Vous pouvez désormais vous connecter.");
         navigate({ to: "/login" });
@@ -66,7 +66,7 @@ function SignupPage() {
             </h1>
             <div className="h-1 w-16 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full mb-4 opacity-50" />
             <p className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40">
-              Inscription Administrateur
+              Créer votre compte
             </p>
           </div>
 

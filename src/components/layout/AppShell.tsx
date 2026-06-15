@@ -6,6 +6,7 @@ import {
   GraduationCap,
   FileText,
   Wallet,
+  BarChart3,
   ClipboardCheck,
   ShieldCheck,
   Car,
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/planning", label: "Planning", icon: CalendarDays },
   { to: "/factures", label: "Factures", icon: FileText },
   { to: "/paiements", label: "Paiements", icon: Wallet },
+  { to: "/comptabilite", label: "Comptabilité", icon: BarChart3 },
   { to: "/examens", label: "Examens", icon: ClipboardCheck },
   { to: "/users", label: "Utilisateurs", icon: ShieldCheck },
 ];
@@ -44,6 +46,7 @@ const breadcrumbLabels: Record<string, string> = {
   planning: "Planning",
   factures: "Factures",
   paiements: "Paiements",
+  comptabilite: "Comptabilité",
   examens: "Examens",
   users: "Utilisateurs",
 };
@@ -58,12 +61,18 @@ export function AppShell({
   sessionType?: "admin" | "eleve" | null;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const segments = pathname.split("/").filter(Boolean);
 
   const isAdmin = sessionId && sessionType === "admin";
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const breadcrumbs = useMemo(
     () =>
@@ -99,102 +108,144 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {isAdmin && (
-        <aside
-          className={cn(
-            "no-print fixed inset-y-0 left-0 z-30 flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 lg:flex",
-            collapsed ? "w-20 border-sidebar-border" : "w-72 border-sidebar-border",
+        <>
+          {/* Mobile Overlay */}
+          {mobileMenuOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
           )}
-        >
-          <div className="flex items-center justify-between gap-3 border-b border-sidebar-border/80 bg-background/95 px-4 py-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-3xl bg-gradient-primary shadow-glow text-primary-foreground">
-                <Car className="h-5 w-5" />
-              </div>
-              {!collapsed && (
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground">
-                    SARAH AUTO
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">ERP Auto-école</p>
+
+          <aside
+            className={cn(
+              "no-print fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
+              mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+              collapsed ? "lg:w-20" : "w-72",
+            )}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-sidebar-border/80 bg-background/95 px-4 py-4 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-3xl bg-gradient-primary shadow-glow text-primary-foreground">
+                  <Car className="h-5 w-5" />
                 </div>
-              )}
+                {(!collapsed || mobileMenuOpen) && (
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground">
+                      SARAH AUTO
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">ERP Auto-école</p>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                className="hidden h-9 w-9 rounded-xl text-sidebar-foreground hover:bg-sidebar/70 hover:text-foreground lg:flex"
+                onClick={() => setCollapsed((value) => !value)}
+              >
+                {collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-9 w-9 rounded-xl text-sidebar-foreground hover:bg-sidebar/70 hover:text-foreground lg:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              className="h-9 w-9 rounded-xl text-sidebar-foreground hover:bg-sidebar/70 hover:text-foreground"
-              onClick={() => setCollapsed((value) => !value)}
-            >
-              {collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
-          </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
-            {navItems.map(({ to, label, icon: Icon, exact }) => {
-              const active = exact ? pathname === to : pathname.startsWith(to);
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    "group flex items-center gap-3 rounded-2xl px-3 py-3 transition duration-300",
-                    active
-                      ? "bg-sidebar/80 text-foreground shadow-sm ring-1 ring-primary/30"
-                      : "text-sidebar-foreground hover:bg-sidebar/80 hover:text-foreground",
-                  )}
-                >
-                  <Icon
+            <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
+              {navItems.map(({ to, label, icon: Icon, exact }) => {
+                const active = exact ? pathname === to : pathname.startsWith(to);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
                     className={cn(
-                      "h-5 w-5 transition-colors duration-300",
-                      active ? "text-primary" : "text-slate-400 group-hover:text-primary",
+                      "group flex items-center gap-3 rounded-2xl px-3 py-3 transition duration-300",
+                      active
+                        ? "bg-sidebar/80 text-foreground shadow-sm ring-1 ring-primary/30"
+                        : "text-sidebar-foreground hover:bg-sidebar/80 hover:text-foreground",
                     )}
-                  />
-                  {!collapsed && <span className="text-sm font-medium">{label}</span>}
-                </Link>
-              );
-            })}
-          </nav>
+                  >
+                    <Icon
+                      className={cn(
+                        "h-5 w-5 transition-colors duration-300",
+                        active ? "text-primary" : "text-slate-400 group-hover:text-primary",
+                      )}
+                    />
+                    {(!collapsed || mobileMenuOpen) && (
+                      <span className="text-sm font-medium">{label}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          <div className={cn("border-t border-slate-800 p-4", collapsed ? "hidden" : "")}>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-slate-300 hover:bg-red-500/10 hover:text-red-300"
-              onClick={() => {
-                clearSession();
-                toast.success("Déconnexion réussie");
-                navigate({ to: "/login" });
-              }}
+            <div
+              className={cn(
+                "border-t border-slate-800 p-4",
+                collapsed && !mobileMenuOpen ? "hidden" : "",
+              )}
             >
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </Button>
-            <div className="mt-4 text-center text-[10px] text-slate-400/70">v2.0</div>
-          </div>
-        </aside>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-slate-300 hover:bg-red-500/10 hover:text-red-300"
+                onClick={() => {
+                  clearSession();
+                  toast.success("Déconnexion réussie");
+                  navigate({ to: "/login" });
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Button>
+              <div className="mt-4 text-center text-[10px] text-slate-400/70">v2.0</div>
+            </div>
+          </aside>
+        </>
       )}
 
-      <main className={cn("flex-1 transition-all duration-300", isAdmin && (collapsed ? "lg:pl-20" : "lg:pl-72"))}>
+      <main
+        className={cn(
+          "flex-1 transition-all duration-300",
+          isAdmin && (collapsed ? "lg:pl-20" : "lg:pl-72"),
+        )}
+      >
         {isAdmin && (
           <div
             className={cn(
-              "no-print fixed inset-x-0 top-0 z-20 border-b border-sidebar-border bg-background/95 backdrop-blur-xl lg:right-0",
+              "no-print fixed inset-x-0 top-0 z-20 border-b border-sidebar-border bg-background/95 backdrop-blur-xl",
               collapsed ? "lg:left-20" : "lg:left-72",
             )}
           >
             <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-card text-foreground">
-                  <Search className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Section</p>
-                  <p className="text-lg font-semibold text-foreground">{activeSection}</p>
-                </div>
-              </div>
-              <div className="hidden items-center gap-3 sm:flex">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-2xl text-slate-300 hover:text-slate-100"
+                  className="rounded-xl lg:hidden"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <div className="hidden grid h-11 w-11 place-items-center rounded-2xl bg-card text-foreground sm:grid">
+                  <Search className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground sm:text-xs">
+                    Section
+                  </p>
+                  <p className="text-sm font-semibold text-foreground sm:text-lg">
+                    {activeSection}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-2xl text-muted-foreground hover:text-foreground"
                   onClick={() => toast("Aucune nouvelle notification pour le moment.")}
                   aria-label="Notifications"
                 >
@@ -203,7 +254,7 @@ export function AppShell({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-2xl text-slate-300 hover:text-slate-100"
+                  className="rounded-2xl text-muted-foreground hover:text-foreground"
                   onClick={toggleTheme}
                   aria-label="Changer le thème"
                 >
@@ -212,7 +263,7 @@ export function AppShell({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="rounded-full px-4"
+                  className="hidden rounded-full px-4 sm:flex"
                   onClick={() => toast("Espace administrateur actif.")}
                 >
                   <UserCircle className="h-4 w-4" />
@@ -220,7 +271,7 @@ export function AppShell({
                 </Button>
               </div>
             </div>
-            <div className="border-t border-slate-800 px-4 py-2 text-xs text-muted-foreground sm:px-6 lg:px-8">
+            <div className="hidden border-t border-sidebar-border/50 px-4 py-2 text-[10px] text-muted-foreground sm:block sm:px-6 sm:text-xs lg:px-8">
               {breadcrumbs.length === 0 ? (
                 <span>Tableau de bord</span>
               ) : (
@@ -239,10 +290,12 @@ export function AppShell({
           </div>
         )}
 
-        <div className={cn(
-          "mx-auto w-full max-w-full px-4 pb-12 sm:px-6 lg:px-8 animate-fade-in-up bg-background text-foreground",
-          isAdmin ? "pt-24 lg:pt-28" : "pt-0"
-        )}>
+        <div
+          className={cn(
+            "mx-auto w-full max-w-full px-4 pb-20 sm:px-6 lg:px-8 lg:pb-12 animate-fade-in-up bg-background text-foreground",
+            isAdmin ? "pt-20 sm:pt-28" : "pt-0",
+          )}
+        >
           {children}
         </div>
 

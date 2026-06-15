@@ -265,6 +265,11 @@ function ExamensPage() {
                       <p className="text-xs text-muted-foreground">
                         {ex.type_permis} • {ex.type_examen}
                       </p>
+                      {ex.inspecteur && (
+                        <p className="text-[10px] font-medium text-primary mt-0.5">
+                          Inspecteur: {ex.inspecteur}
+                        </p>
+                      )}
                     </div>
                     <Badge variant="outline" className={meta.color}>
                       <Icon className="mr-1 h-3 w-3" /> {labelResultat(ex.resultat || "en_attente")}
@@ -364,6 +369,7 @@ function ExamenDialog({
   const [exam_type, setExamType] = useState<ExamType>("Code");
   const [type_permis, setTypePermis] = useState<PermisType>("Permis B");
   const [date_examen, setDateExamen] = useState(new Date().toISOString().slice(0, 10));
+  const [inspecteur, setInspecteur] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -372,6 +378,7 @@ function ExamenDialog({
       setExamType("Code");
       setTypePermis("Permis B");
       setDateExamen(new Date().toISOString().slice(0, 10));
+      setInspecteur("");
       setNotes("");
     }
   }, [open]);
@@ -398,6 +405,8 @@ function ExamenDialog({
                   type_examen: exam_type,
                   type_permis,
                   date_examen,
+                  inspecteur: inspecteur || null,
+                  inspecteur_id: null,
                   resultat: "en_attente",
                   notes: notes || null,
                   formation_id: null,
@@ -477,6 +486,15 @@ function ExamenDialog({
                 value={date_examen}
                 onChange={(e) => setDateExamen(e.target.value)}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ins">Inspecteur</Label>
+              <Input
+                id="ins"
+                value={inspecteur}
+                onChange={(e) => setInspecteur(e.target.value)}
+                placeholder="Nom de l'inspecteur..."
               />
             </div>
             <div className="space-y-2">

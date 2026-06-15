@@ -16,7 +16,8 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { useStore } from "@/lib/store";
-import { getSessionId, getSessionType } from "@/lib/auth";
+import { getCurrentUser, getSession } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 function NotFoundComponent() {
   return (
@@ -115,11 +116,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -133,42 +134,75 @@ function RootComponent() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionType, setSessionType] = useState<"admin" | "eleve" | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Stability Phase 1: Pure Mounting
   useEffect(() => {
-    setIsMounted(true);
-    const id = getSessionId();
-    const type = getSessionType();
-    setSessionId(id);
-    setSessionType(type);
-    setIsAuthLoading(false);
+    setMounted(true);
+  }, []);
 
-    const publicRoutes = ["/login", "/signup"];
-    const isPublic = publicRoutes.includes(location.pathname);
+  // Stability Phase 2: Auth and Data
+  useEffect(() => {
+    if (!mounted) return;
 
-    if (!id && !isPublic) {
-      navigate({ to: "/login" });
-    } else if (id) {
-      if (isPublic) {
-        navigate({ to: type === "admin" ? "/" : "/portal" });
-      } else if (type === "eleve" && !location.pathname.startsWith("/portal")) {
-        navigate({ to: "/portal" });
+    const checkAuth = async () => {
+      const session = await getSession();
+      const publicRoutes = ["/login", "/signup"];
+      const isPublic = publicRoutes.includes(location.pathname);
+
+      if (session) {
+        setSessionId(session.user.id);
+        setSessionType("admin");
+        if (isPublic) navigate({ to: "/" });
+      } else {
+        const localId = localStorage.getItem("sarah_auto_session_id");
+        const localType = localStorage.getItem("sarah_auto_session_type") as "admin" | "eleve" | null;
+
+        if (localId && localType === "eleve") {
+          setSessionId(localId);
+          setSessionType("eleve");
+          if (isPublic) navigate({ to: "/portal" });
+        } else if (!isPublic) {
+          navigate({ to: "/login" });
+        }
       }
-    }
-  }, [location.pathname, navigate]);
+      setIsAuthLoading(false);
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        setSessionId(session.user.id);
+        setSessionType("admin");
+      } else if (event === "SIGNED_OUT") {
+        setSessionId(null);
+        setSessionType(null);
+        navigate({ to: "/login" });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [location.pathname, navigate, mounted]);
 
   useEffect(() => {
-    if (sessionId && isMounted) {
+    if (sessionId && mounted) {
       fetchData();
     }
-  }, [sessionId, fetchData, isMounted]);
+  }, [sessionId, fetchData, mounted]);
+
+  // Expert Fix: Return exactly what the server rendered (or nothing) on the first pass
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
       <QueryClientProvider client={queryClient}>
         <RootLayout sessionId={sessionId} sessionType={sessionType}>
-          {!isMounted || isAuthLoading ? (
+          {isAuthLoading ? (
             <div className="flex min-h-screen items-center justify-center">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
@@ -176,7 +210,7 @@ function RootComponent() {
             <Outlet />
           )}
         </RootLayout>
-        <Toaster />
+        <Toaster position="top-right" closeButton richColors />
       </QueryClientProvider>
     </div>
   );

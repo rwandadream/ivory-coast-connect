@@ -8,8 +8,6 @@ import {
   ClipboardCheck,
   TrendingUp,
   ArrowRight,
-  BarChart3,
-  LineChart as LineChartIcon,
   Plus,
   Download,
   CalendarDays,
@@ -52,37 +50,37 @@ const StatCard = memo(function StatCard({
   return (
     <Card
       className={cn(
-        "glass group relative overflow-hidden border-slate-700/70 bg-slate-950/80 transition-all duration-500 hover:-translate-y-2 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_rgba(79,70,229,0.3)]",
+        "glass group relative overflow-hidden border-slate-700/70 bg-slate-950/80 transition-all duration-500 hover:-translate-y-1 sm:hover:-translate-y-2 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_rgba(79,70,229,0.3)]",
         accent && "border-primary/30",
         "animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both",
       )}
       style={{ animationDelay: `${index * 150}ms` }}
     >
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl transition-all duration-700 group-hover:bg-primary/20 group-hover:scale-150" />
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 group-hover:text-primary transition-colors duration-300">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
+          <div className="space-y-0.5 sm:space-y-1">
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-slate-400 group-hover:text-primary transition-colors duration-300">
               {label}
             </p>
-            <p className="text-4xl font-bold tracking-tight text-slate-100 sm:text-5xl group-hover:text-white transition-all duration-300">
+            <p className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-100 group-hover:text-white transition-all duration-300">
               {value}
             </p>
             {hint && (
-              <p className="text-xs font-medium text-slate-500 group-hover:text-slate-300 transition-colors duration-300">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-500 group-hover:text-slate-300 transition-colors duration-300">
                 {hint}
               </p>
             )}
           </div>
           <div
             className={cn(
-              "grid h-14 w-14 place-items-center rounded-2xl shadow-glow transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-110 group-hover:shadow-primary/40",
+              "grid h-10 w-10 sm:h-14 sm:w-14 place-items-center rounded-xl sm:rounded-2xl shadow-glow transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-110 group-hover:shadow-primary/40",
               accent
                 ? "bg-gradient-primary text-primary-foreground"
                 : "bg-slate-800 text-slate-100 group-hover:bg-slate-700",
             )}
           >
-            <Icon className="h-7 w-7 transition-transform duration-500 group-hover:scale-110" />
+            <Icon className="h-5 w-5 sm:h-7 sm:w-7 transition-transform duration-500 group-hover:scale-110" />
           </div>
         </div>
       </CardContent>
@@ -98,6 +96,7 @@ function Dashboard() {
     paiements,
     inscriptions,
     examens,
+    depenses,
     getStatutFacture,
     getMontantPaye,
   } = useStore(
@@ -108,6 +107,7 @@ function Dashboard() {
       paiements: s.paiements,
       inscriptions: s.inscriptions,
       examens: s.examens,
+      depenses: s.depenses,
       getStatutFacture: s.getStatutFacture,
       getMontantPaye: s.getMontantPaye,
     })),
@@ -136,6 +136,9 @@ function Dashboard() {
     () => paiements.reduce((sum, p) => sum + p.montant, 0),
     [paiements],
   );
+  const totalDepenses = useMemo(() => depenses.reduce((sum, d) => sum + d.montant, 0), [depenses]);
+  const beneficeTotal = totalRecouvre - totalDepenses;
+
   const totalFacture = useMemo(
     () => facturesWithDetails.reduce((sum, item) => sum + item.facture.montant, 0),
     [facturesWithDetails],
@@ -164,14 +167,18 @@ function Dashboard() {
     [paiements, currentMonth, currentYear],
   );
 
-  const paiementsThisMonthCount = useMemo(
+  const depensesMensuelles = useMemo(
     () =>
-      paiements.filter((p) => {
-        const date = new Date(p.date_paiement || p.created_at || "");
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-      }).length,
-    [paiements, currentMonth, currentYear],
+      depenses
+        .filter((d) => {
+          const date = new Date(d.date);
+          return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        })
+        .reduce((sum, d) => sum + d.montant, 0),
+    [depenses, currentMonth, currentYear],
   );
+
+  const beneficeMensuel = paiementsMensuels - depensesMensuelles;
 
   const statusCounts = useMemo(
     () =>
@@ -212,7 +219,7 @@ function Dashboard() {
   const nouveauxCeMois = useMemo(
     () =>
       eleves.filter((e) => {
-        const created = new Date(e.created_at);
+        const created = new Date(e.created_at || "");
         return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
       }).length,
     [eleves, currentMonth, currentYear],
@@ -220,11 +227,11 @@ function Dashboard() {
 
   const financeData = useMemo(
     () => [
-      { name: "Facturé", value: totalFacture, color: "#4f46e5" },
       { name: "Reçu", value: totalRecouvre, color: "#16a34a" },
-      { name: "Reste", value: Math.max(0, totalFacture - totalRecouvre), color: "#f59e0b" },
+      { name: "Dépenses", value: totalDepenses, color: "#ef4444" },
+      { name: "Bénéfice", value: Math.max(0, beneficeTotal), color: "#4f46e5" },
     ],
-    [totalFacture, totalRecouvre],
+    [totalRecouvre, totalDepenses, beneficeTotal],
   );
 
   const enrollmentData = useMemo(() => {
@@ -249,7 +256,7 @@ function Dashboard() {
       const monthIndex = date.getMonth();
       const year = date.getFullYear();
       const count = eleves.filter((e) => {
-        const created = new Date(e.created_at);
+        const created = new Date(e.created_at || "");
         return created.getMonth() === monthIndex && created.getFullYear() === year;
       }).length;
       months.push({ name: monthNames[monthIndex], count });
@@ -269,12 +276,17 @@ function Dashboard() {
         ["Nouveaux ce mois", `${nouveauxCeMois}`],
         ["Examens programmés", `${examensProgrammes}`],
         ["Taux de réussite", `${tauxReussite}%`],
+        ["Revenus (Total)", `${formatXOF(totalRecouvre)}`],
+        ["Dépenses (Total)", `${formatXOF(totalDepenses)}`],
+        ["Bénéfice (Total)", `${formatXOF(beneficeTotal)}`],
         ["Revenus mensuels", `${formatXOF(paiementsMensuels)}`],
+        ["Dépenses mensuelles", `${formatXOF(depensesMensuelles)}`],
+        ["Bénéfice mensuel", `${formatXOF(beneficeMensuel)}`],
         ["Factures impayées", `${statusCounts.facturesNonPayees}`],
         ["Montant à recouvrer", `${formatXOF(statusCounts.facturesToCollect)}`],
       ];
 
-      downloadCsv(rows, `rapport-dashboard-${new Date().toISOString().slice(0, 10)}.csv`);
+      downloadCsv(rows, `rapport-financier-${new Date().toISOString().slice(0, 10)}.csv`);
     } catch (error) {
       toast.error("Impossible d'exporter le rapport.");
       console.error(error);
@@ -331,23 +343,23 @@ function Dashboard() {
           index={0}
         />
         <StatCard
-          label="Élèves actifs"
-          value={elevesActifs}
-          hint={`${elevesEnAttente} en attente`}
-          icon={GraduationCap}
+          label="Bénéfice Net"
+          value={formatXOF(beneficeMensuel)}
+          hint="Mois en cours"
+          icon={TrendingUp}
           index={1}
         />
         <StatCard
-          label="Revenus mensuels"
+          label="Revenus (Paiements)"
           value={formatXOF(paiementsMensuels)}
-          hint={`${paiementsThisMonthCount} paiements`}
+          hint="Encaissements du mois"
           icon={Wallet}
           index={2}
         />
         <StatCard
-          label="Factures impayées"
-          value={statusCounts.facturesNonPayees}
-          hint={`${formatXOF(statusCounts.facturesToCollect)} à recouvrer`}
+          label="Dépenses"
+          value={formatXOF(depensesMensuelles)}
+          hint="Sorties du mois"
           icon={FileText}
           index={3}
         />
@@ -409,8 +421,7 @@ function Dashboard() {
                 <p className="mt-1 text-3xl font-extrabold text-foreground">
                   {formatXOF(
                     facturesNonPayees.reduce(
-                      (sum: number, item) =>
-                        sum + (item.facture.montant - getMontantPaye(item.facture.id)),
+                      (sum: number, item) => sum + (item.facture.montant - item.paye),
                       0,
                     ),
                   )}
@@ -490,7 +501,7 @@ function Dashboard() {
                     variant="outline"
                     className="text-[10px] border-primary/20 bg-primary/5 text-primary font-bold px-2"
                   >
-                    {new Date(e.created_at).toLocaleDateString("fr-FR", {
+                    {new Date(e.created_at || "").toLocaleDateString("fr-FR", {
                       day: "2-digit",
                       month: "short",
                     })}

@@ -375,7 +375,7 @@ function NouvelleInscriptionDialog({
               <SelectContent>
                 {formationsActives.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
-                    {f.nom} — {formatXOF(f.prix)}
+                    {f.nom} — {formatXOF(f.prix ?? 0)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -472,9 +472,9 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
         formation: formation.nom,
         montant: f.montant,
         paiements: factPaiements.map((p) => ({
-          date: p.date_paiement || "",
+          date: p.date_paiement || p.created_at || "",
           montant: p.montant,
-          mode: p.mode_paiement,
+          mode: p.mode_paiement || "especes",
         })),
       });
       toast.success("PDF téléchargé avec succès", { id: toastId });

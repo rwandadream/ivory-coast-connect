@@ -125,12 +125,12 @@ function PlanningPage() {
           const m = moniteurMap.get(s.moniteur_id ?? "");
           const e = eleveMap.get(s.eleve_id ?? "");
           return [
-            s.titre,
+            s.titre || "",
             m ? `${m.prenom} ${m.nom}` : "-",
             e ? `${e.prenom} ${e.nom}` : "-",
             new Date(s.date_heure).toLocaleString("fr-FR"),
             `${s.duree_minutes} min`,
-            s.type,
+            s.type || "",
             s.lieu || "-",
           ];
         }),
@@ -375,13 +375,13 @@ function SessionDialog({
       setForm(
         editing
           ? {
-              titre: editing.titre,
+              titre: editing.titre || "",
               eleve_id: editing.eleve_id ?? "none",
               moniteur_id: editing.moniteur_id ?? "none",
               date_heure: editing.date_heure,
-              duree_minutes: editing.duree_minutes,
+              duree_minutes: editing.duree_minutes || 60,
               lieu: editing.lieu ?? "",
-              type: editing.type,
+              type: editing.type || "Formation",
               notes: editing.notes ?? "",
             }
           : {

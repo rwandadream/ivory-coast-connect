@@ -110,7 +110,7 @@ function FormationsPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Tarif Forfaitaire
               </p>
-              <p className="mt-1 text-3xl font-black text-primary">{formatXOF(f.prix)}</p>
+              <p className="mt-1 text-3xl font-black text-primary">{formatXOF(f.prix ?? 0)}</p>
             </div>
 
             <div className="mt-6 flex gap-2">
@@ -197,13 +197,17 @@ function FormationDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!form.nom.trim() || form.prix < 0) {
+            if (!form.nom.trim() || (form.prix ?? 0) < 0) {
               toast.error("Nom et tarif requis");
               return;
             }
             setIsSubmitting(true);
             try {
-              await onSubmit(form);
+              await onSubmit({
+                ...form,
+                actif: form.actif ?? true,
+                prix: form.prix ?? 0
+              });
             } catch (err) {
               toast.error("Erreur technique");
             } finally {
@@ -236,7 +240,7 @@ function FormationDialog({
             <Label htmlFor="prix">Tarif (FCFA) *</Label>
             <MoneyInput
               id="prix"
-              value={form.prix}
+              value={form.prix ?? 0}
               onValueChange={(value: number) => setForm({ ...form, prix: value })}
               placeholder="0"
               min={0}
@@ -251,7 +255,7 @@ function FormationDialog({
                 Disponible pour les nouvelles inscriptions
               </p>
             </div>
-            <Switch checked={form.actif} onCheckedChange={(c) => setForm({ ...form, actif: c })} />
+            <Switch checked={form.actif ?? true} onCheckedChange={(c) => setForm({ ...form, actif: c })} />
           </div>
           <DialogFooter>
             <Button

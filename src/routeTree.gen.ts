@@ -20,6 +20,7 @@ import { Route as FormationsRouteImport } from './routes/formations'
 import { Route as FacturesRouteImport } from './routes/factures'
 import { Route as ExamensRouteImport } from './routes/examens'
 import { Route as ElevesRouteImport } from './routes/eleves'
+import { Route as ComptabiliteRouteImport } from './routes/comptabilite'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UsersRoute = UsersRouteImport.update({
@@ -77,6 +78,11 @@ const ElevesRoute = ElevesRouteImport.update({
   path: '/eleves',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComptabiliteRoute = ComptabiliteRouteImport.update({
+  id: '/comptabilite',
+  path: '/comptabilite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -85,6 +91,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/comptabilite': typeof ComptabiliteRoute
   '/eleves': typeof ElevesRoute
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/comptabilite': typeof ComptabiliteRoute
   '/eleves': typeof ElevesRoute
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
@@ -114,6 +122,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/comptabilite': typeof ComptabiliteRoute
   '/eleves': typeof ElevesRoute
   '/examens': typeof ExamensRoute
   '/factures': typeof FacturesRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/comptabilite'
     | '/eleves'
     | '/examens'
     | '/factures'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/comptabilite'
     | '/eleves'
     | '/examens'
     | '/factures'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/comptabilite'
     | '/eleves'
     | '/examens'
     | '/factures'
@@ -173,6 +185,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ComptabiliteRoute: typeof ComptabiliteRoute
   ElevesRoute: typeof ElevesRoute
   ExamensRoute: typeof ExamensRoute
   FacturesRoute: typeof FacturesRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ElevesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/comptabilite': {
+      id: '/comptabilite'
+      path: '/comptabilite'
+      fullPath: '/comptabilite'
+      preLoaderRoute: typeof ComptabiliteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -277,6 +297,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ComptabiliteRoute: ComptabiliteRoute,
   ElevesRoute: ElevesRoute,
   ExamensRoute: ExamensRoute,
   FacturesRoute: FacturesRoute,

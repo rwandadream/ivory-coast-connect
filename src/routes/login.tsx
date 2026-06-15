@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, ArrowRight, Car, User, Hash, Phone } from "lucide-react";
-import { validateUserCredentials, validateStudentCredentials, setSession } from "@/lib/auth";
+import { signIn, validateStudentCredentials } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/store";
 
@@ -27,12 +27,11 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = validateUserCredentials(email, password);
-      if (result.error || !result.user) {
-        toast.error(result.error || "Identifiants invalides.");
-      } else {
-        setSession(result.user.id, "admin");
-        toast.success("Bienvenue, " + result.user.name);
+      const { data, error } = await signIn(email, password);
+      if (error) {
+        toast.error(error.message);
+      } else if (data.user) {
+        toast.success("Bienvenue");
         navigate({ to: "/" });
       }
     } catch (error) {
@@ -51,7 +50,10 @@ function LoginPage() {
       if (result.error || !result.eleve) {
         toast.error(result.error || "Identifiants invalides.");
       } else {
-        setSession(result.eleve.id, "eleve");
+        // We'll need a new way to handle student session in Supabase later
+        // For now, we might still need localStorage for student portal if they are not auth users
+        localStorage.setItem("sarah_auto_session_id", result.eleve.id);
+        localStorage.setItem("sarah_auto_session_type", "eleve");
         toast.success("Bienvenue dans votre espace, " + result.eleve.prenom);
         navigate({ to: "/portal" });
       }
@@ -204,9 +206,9 @@ function LoginPage() {
 
           <div className="mt-10 pt-8 border-t border-white/5 text-center">
             <p className="text-sm font-semibold">
-              <span className="text-white/30">Admin SARAH ?</span>
+              <span className="text-white/30">Nouveau collaborateur ?</span>
               <Link to="/signup" className="ml-3 font-black text-primary hover:underline">
-                Recruter un conseiller
+                Créer un compte
               </Link>
             </p>
           </div>
