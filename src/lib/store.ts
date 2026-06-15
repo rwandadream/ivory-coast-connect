@@ -132,12 +132,18 @@ type State = {
   deleteDepense: (id: string) => Promise<void>;
 
   // Users
-  addUser: (user: any) => Promise<void>;
-  updateUser: (id: string, data: any) => Promise<void>;
+  addUser: (user: Partial<User>) => Promise<void>;
+  updateUser: (id: string, data: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
 
   // Audit
-  addAuditEntry: (action: string, entity: string, entity_id?: string, old_data?: any, new_data?: any) => Promise<void>;
+  addAuditEntry: (
+    action: string,
+    entity: string,
+    entity_id?: string,
+    old_data?: unknown,
+    new_data?: unknown,
+  ) => Promise<void>;
 
   // Helpers
   getMontantPaye: (factureId: string) => number;
@@ -179,7 +185,7 @@ export const useStore = create<State>((set, get) => ({
         { data: profiles },
         { data: audit },
         { data: permis },
-        { data: inspecteurs }
+        { data: inspecteurs },
       ] = await Promise.all([
         supabase.from("eleves").select("*").order("created_at", { ascending: false }),
         supabase.from("formations").select("*").order("nom"),
@@ -194,27 +200,27 @@ export const useStore = create<State>((set, get) => ({
         supabase.from("profiles").select("*"),
         supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("permis").select("*"),
-        supabase.from("inspecteurs").select("*")
+        supabase.from("inspecteurs").select("*"),
       ]);
 
-      const mappedEleves = (eleves || []).map(e => {
-        const p = (permis || []).find(x => x.id === e.permis_id);
-        const insp = (inspecteurs || []).find(x => x.id === e.inspecteur_id);
+      const mappedEleves = (eleves || []).map((e) => {
+        const p = (permis || []).find((x) => x.id === e.permis_id);
+        const insp = (inspecteurs || []).find((x) => x.id === e.inspecteur_id);
         return {
           ...e,
           dossier_code: e.id.slice(0, 8).toUpperCase(),
           type_permis: p?.code || "B",
           code: e.id.slice(-4).toUpperCase(),
           inspecteur: insp ? `${insp.prenom} ${insp.nom}` : null,
-          statut: e.statut || "prospect"
+          statut: e.statut || "prospect",
         } as Eleve;
       });
 
-      const mappedFactures = (factures || []).map(f => {
+      const mappedFactures = (factures || []).map((f) => {
         const montant_paye = (paiements || [])
-          .filter(p => p.facture_id === f.id)
+          .filter((p) => p.facture_id === f.id)
           .reduce((sum, p) => sum + p.montant, 0);
-        
+
         let statut: "non_payee" | "partielle" | "payee" = "non_payee";
         if (montant_paye >= f.montant) statut = "payee";
         else if (montant_paye > 0) statut = "partielle";
@@ -222,49 +228,56 @@ export const useStore = create<State>((set, get) => ({
         return {
           ...f,
           montant_paye,
-          statut
+          statut,
         } as Facture;
       });
 
-      const mappedDepenses = (depenses || []).map(d => ({
-        ...d,
-        date: d.date_depense || d.created_at || ""
-      } as Depense));
+      const mappedDepenses = (depenses || []).map(
+        (d) =>
+          ({
+            ...d,
+            date: d.date_depense || d.created_at || "",
+          }) as Depense,
+      );
 
-      const mappedExamens = (examens || []).map(ex => {
-        const insp = (inspecteurs || []).find(x => x.id === ex.inspecteur_id);
-        const eleve = mappedEleves.find(e => e.id === ex.eleve_id);
+      const mappedExamens = (examens || []).map((ex) => {
+        const insp = (inspecteurs || []).find((x) => x.id === ex.inspecteur_id);
+        const eleve = mappedEleves.find((e) => e.id === ex.eleve_id);
         return {
           ...ex,
           type_permis: eleve?.type_permis || "B",
-          inspecteur: insp ? `${insp.prenom} ${insp.nom}` : null
+          inspecteur: insp ? `${insp.prenom} ${insp.nom}` : null,
         } as Examen;
       });
 
-      const mappedPlanning = (seances || []).map(s => {
-        const eleve = mappedEleves.find(e => e.id === s.eleve_id);
+      const mappedPlanning = (seances || []).map((s) => {
+        const eleve = mappedEleves.find((e) => e.id === s.eleve_id);
         return {
           ...s,
-          titre: s.titre || (eleve ? `Conduite: ${eleve.prenom} ${eleve.nom}` : "Séance de conduite"),
-          date_heure: s.date_seance ? `${s.date_seance}T${s.heure_debut || '08:00:00'}` : "",
+          titre:
+            s.titre || (eleve ? `Conduite: ${eleve.prenom} ${eleve.nom}` : "Séance de conduite"),
+          date_heure: s.date_seance ? `${s.date_seance}T${s.heure_debut || "08:00:00"}` : "",
           duree_minutes: s.duree_minutes || 60,
           type: s.type || "Formation",
-          lieu: s.lieu || null
+          lieu: s.lieu || null,
         } as PlanningSession;
       });
 
-      const users = (profiles || []).map(p => ({
+      const users = (profiles || []).map((p) => ({
         id: p.id,
         email: p.email,
         name: p.name || "",
         role: p.role as User["role"],
-        created_at: p.created_at || ""
+        created_at: p.created_at || "",
       }));
 
       set({
         eleves: mappedEleves,
         formations: formations || [],
-        inscriptions: (inscriptions || []).map(ins => ({ ...ins, dossier_code: ins.id.slice(0, 8).toUpperCase() })),
+        inscriptions: (inscriptions || []).map((ins) => ({
+          ...ins,
+          dossier_code: ins.id.slice(0, 8).toUpperCase(),
+        })),
         factures: mappedFactures,
         paiements: paiements || [],
         examens: mappedExamens,
@@ -275,7 +288,7 @@ export const useStore = create<State>((set, get) => ({
         depenses: mappedDepenses,
         profiles: profiles || [],
         users,
-        audit: audit || []
+        audit: audit || [],
       });
     } finally {
       set({ isLoading: false });
@@ -289,14 +302,14 @@ export const useStore = create<State>((set, get) => ({
     get().addAuditEntry("CREATION", "ELEVE", data.id, null, data);
   },
   updateEleve: async (id, e) => {
-    const old = get().eleves.find(x => x.id === id);
+    const old = get().eleves.find((x) => x.id === id);
     const { data, error } = await supabase.from("eleves").update(e).eq("id", id).select().single();
     if (error) throw error;
     await get().fetchData();
     get().addAuditEntry("MODIFICATION", "ELEVE", id, old, data);
   },
   deleteEleve: async (id) => {
-    const old = get().eleves.find(x => x.id === id);
+    const old = get().eleves.find((x) => x.id === id);
     const { error } = await supabase.from("eleves").delete().eq("id", id);
     if (error) throw error;
     await get().fetchData();
@@ -320,7 +333,11 @@ export const useStore = create<State>((set, get) => ({
   },
 
   addInscription: async (i) => {
-    const { data: inscription, error: insError } = await supabase.from("inscriptions").insert(i).select().single();
+    const { data: inscription, error: insError } = await supabase
+      .from("inscriptions")
+      .insert(i)
+      .select()
+      .single();
     if (insError) throw insError;
 
     const invoiceNumber = `FAC-${Date.now().toString().slice(-6)}`;
@@ -329,7 +346,7 @@ export const useStore = create<State>((set, get) => ({
       inscription_id: inscription.id,
       montant: i.tarif,
       numero: invoiceNumber,
-      statut: "impayee"
+      statut: "impayee",
     });
 
     if (facError) throw facError;
@@ -437,7 +454,7 @@ export const useStore = create<State>((set, get) => ({
     const { data, error } = await supabase.auth.signUp({
       email: user.email,
       password: user.password,
-      options: { data: { name: user.name, role: user.role } }
+      options: { data: { name: user.name, role: user.role } },
     });
     if (error) throw error;
     await get().fetchData();
@@ -461,20 +478,20 @@ export const useStore = create<State>((set, get) => ({
       entity_id,
       old_data: old_data ? JSON.parse(JSON.stringify(old_data)) : null,
       new_data: new_data ? JSON.parse(JSON.stringify(new_data)) : null,
-      user_id: user?.id
+      user_id: user?.id,
     });
   },
 
   getMontantPaye: (factureId) => {
-    const f = get().factures.find(x => x.id === factureId);
+    const f = get().factures.find((x) => x.id === factureId);
     return f ? f.montant_paye : 0;
   },
   getStatutFacture: (factureId) => {
-    const f = get().factures.find(x => x.id === factureId);
+    const f = get().factures.find((x) => x.id === factureId);
     return f ? f.statut : "non_payee";
   },
   getFactureReste: (factureId) => {
-    const f = get().factures.find(x => x.id === factureId);
+    const f = get().factures.find((x) => x.id === factureId);
     if (!f) return 0;
     return Math.max(0, f.montant - f.montant_paye);
   },

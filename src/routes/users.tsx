@@ -61,7 +61,7 @@ function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [search, setSearch] = useState("");
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   useEffect(() => {
     getCurrentUser().then(setCurrentUser);
   }, []);

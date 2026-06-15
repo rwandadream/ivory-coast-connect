@@ -158,7 +158,10 @@ function RootComponent() {
         if (isPublic) navigate({ to: "/" });
       } else {
         const localId = localStorage.getItem("sarah_auto_session_id");
-        const localType = localStorage.getItem("sarah_auto_session_type") as "admin" | "eleve" | null;
+        const localType = localStorage.getItem("sarah_auto_session_type") as
+          | "admin"
+          | "eleve"
+          | null;
 
         if (localId && localType === "eleve") {
           setSessionId(localId);
@@ -173,7 +176,9 @@ function RootComponent() {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         setSessionId(session.user.id);
         setSessionType("admin");

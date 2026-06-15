@@ -206,7 +206,7 @@ function FormationDialog({
               await onSubmit({
                 ...form,
                 actif: form.actif ?? true,
-                prix: form.prix ?? 0
+                prix: form.prix ?? 0,
               });
             } catch (err) {
               toast.error("Erreur technique");
@@ -255,7 +255,10 @@ function FormationDialog({
                 Disponible pour les nouvelles inscriptions
               </p>
             </div>
-            <Switch checked={form.actif ?? true} onCheckedChange={(c) => setForm({ ...form, actif: c })} />
+            <Switch
+              checked={form.actif ?? true}
+              onCheckedChange={(c) => setForm({ ...form, actif: c })}
+            />
           </div>
           <DialogFooter>
             <Button

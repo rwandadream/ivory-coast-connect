@@ -14,20 +14,22 @@ export type AuthUser = {
 };
 
 export async function getSession() {
-  const { data: { session }, error } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
   if (error) return null;
   return session;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
   if (error || !user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
   if (!profile) return null;
 
@@ -42,20 +44,20 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 export async function signOut() {
   await supabase.auth.signOut();
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('student-session-id');
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("student-session-id");
   }
 }
 
 export function clearSession() {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('student-session-id');
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("student-session-id");
   }
 }
 
 export function getSessionId() {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('student-session-id');
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("student-session-id");
   }
   return null;
 }
@@ -82,10 +84,12 @@ export async function signUp(email: string, password: string, name: string) {
 }
 
 // Keep this for the student portal, but it will need to be adapted to Supabase later
+import { Tables } from "./database.types";
+
 export function validateStudentCredentials(
   dossierCode: string,
   telephone: string,
-  eleves: any[],
+  eleves: Tables<"eleves">["Row"][],
 ) {
   const cleanInputTel = telephone.replace(/\D/g, "");
   const eleve = eleves.find(
@@ -95,7 +99,9 @@ export function validateStudentCredentials(
   );
 
   if (!eleve) {
-    return { error: "Identifiants invalides (Vérifiez le code dossier et le téléphone)." };
+    return {
+      error: "Identifiants invalides (Vérifiez le code dossier et le téléphone).",
+    };
   }
 
   return { eleve };

@@ -195,8 +195,8 @@ function ComptabilitePage() {
                           {CATEGORIES.find((c) => c.id === d.categorie)?.label || d.categorie}
                         </p>
                         <Badge variant="outline" className="text-[10px] uppercase">
-                                                   {(d.mode_paiement || "especes").replace("_", " ")}
-                                                 </Badge>
+                          {(d.mode_paiement || "especes").replace("_", " ")}
+                        </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
                         {new Date(d.date).toLocaleDateString("fr-FR", {
