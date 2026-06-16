@@ -247,7 +247,7 @@ const NodeResponse = /* @__PURE__ */ (() => {
 	return NodeResponse;
 })();
 //#endregion
-//#region node_modules/h3/dist/h3.mjs
+//#region node_modules/h3-v2/dist/h3-Bz4OPZv_.mjs
 function decodePathname(pathname) {
 	return decodeURI(pathname.includes("%25") ? pathname.replace(/%25/g, "%2525") : pathname);
 }
@@ -394,7 +394,7 @@ function isJSONSerializable(value, _type) {
 const kNotFound = /* @__PURE__ */ Symbol.for("h3.notFound");
 const kHandled = /* @__PURE__ */ Symbol.for("h3.handled");
 function toResponse(val, event, config = {}) {
-	if (typeof val?.then === "function") return val.then((resolvedVal) => toResponse(resolvedVal, event, config), (r) => toResponse(typeof r === "number" ? new HTTPError({ status: r }) : r, event, config));
+	if (typeof val?.then === "function") return (val.catch?.((error) => error) || Promise.resolve(val)).then((resolvedVal) => toResponse(resolvedVal, event, config));
 	const response = prepareResponse(val, event, config);
 	if (typeof response?.then === "function") return toResponse(response, event, config);
 	const { onResponse } = config;
@@ -529,70 +529,5 @@ function errorResponse(error, debug, errHeaders) {
 		headers
 	});
 }
-function callMiddleware(event, middleware, handler, index = 0) {
-	if (index === middleware.length) return handler(event);
-	const fn = middleware[index];
-	let nextCalled;
-	let nextResult;
-	const next = () => {
-		if (nextCalled) return nextResult;
-		nextCalled = true;
-		nextResult = callMiddleware(event, middleware, handler, index + 1);
-		return nextResult;
-	};
-	const ret = fn(event, next);
-	return isUnhandledResponse(ret) ? next() : typeof ret?.then === "function" ? ret.then((resolved) => isUnhandledResponse(resolved) ? next() : resolved) : ret;
-}
-function isUnhandledResponse(val) {
-	return val === void 0 || val === kNotFound;
-}
-const NoHandler = () => kNotFound;
-var H3Core = class {
-	static "~h3" = true;
-	config;
-	"~middleware";
-	"~routes" = [];
-	constructor(config = {}) {
-		this["~middleware"] = [];
-		this.config = config;
-		this.fetch = this.fetch.bind(this);
-		this.handler = this.handler.bind(this);
-	}
-	fetch(request) {
-		return this["~request"](request);
-	}
-	handler(event) {
-		const route = this["~findRoute"](event);
-		if (route) {
-			event.context.params = route.params;
-			event.context.matchedRoute = route.data;
-		}
-		const routeHandler = route?.data.handler || NoHandler;
-		const middleware = this["~getMiddleware"](event, route);
-		return middleware.length > 0 ? callMiddleware(event, middleware, routeHandler) : routeHandler(event);
-	}
-	"~request"(request, context) {
-		const event = new H3Event(request, context, this);
-		let handlerRes;
-		try {
-			if (this.config.onRequest) {
-				const hookRes = this.config.onRequest(event);
-				handlerRes = typeof hookRes?.then === "function" ? hookRes.then(() => this.handler(event)) : this.handler(event);
-			} else handlerRes = this.handler(event);
-		} catch (error) {
-			handlerRes = Promise.reject(error);
-		}
-		return toResponse(handlerRes, event, this.config);
-	}
-	"~findRoute"(_event) {}
-	"~addRoute"(_route) {
-		this["~routes"].push(_route);
-	}
-	"~getMiddleware"(_event, route) {
-		const routeMiddleware = route?.data.middleware;
-		const globalMiddleware = this["~middleware"];
-		return routeMiddleware ? [...globalMiddleware, ...routeMiddleware] : globalMiddleware;
-	}
-};
 //#endregion
-export { HTTPError as n, NodeResponse as r, H3Core as t };
+export { toResponse as n, H3Event as t };
