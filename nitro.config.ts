@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 export default defineNitroConfig({
   preset: "vercel",
+  // Point to the ALREADY BUNDLED server from Vite
+  // This avoids build issues with TanStack Start's internal subpath imports
   entry: resolve(__dirname, "dist/server/server.js"),
   publicAssets: [
     {
