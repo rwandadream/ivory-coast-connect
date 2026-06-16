@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
 import { compressImage } from "@/lib/utils";
 import {
@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TelInput } from "@/components/TelInput";
 import { CniScanner } from "@/components/CniScanner";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -74,6 +75,103 @@ type EleveForm = {
   parrain_nom?: string;
 };
 
+const EleveCard = memo(
+  ({
+    eleve,
+    onEdit,
+    onDelete,
+    onView,
+  }: {
+    eleve: Eleve;
+    onEdit: (e: Eleve) => void;
+    onDelete: (id: string) => Promise<void>;
+    onView: (id: string) => void;
+  }) => {
+    return (
+      <Card className="group p-3 sm:p-4 transition-all hover:shadow-elegant">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs sm:text-sm font-semibold text-primary-foreground uppercase">
+            {(eleve.prenom?.[0] || "") + (eleve.nom?.[0] || "")}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-1 sm:gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm sm:text-base font-semibold text-foreground">
+                  {eleve.prenom} {eleve.nom}
+                </p>
+                <Badge variant="secondary" className="mt-0.5 text-[9px] sm:text-[10px]">
+                  {eleve.type_permis}
+                </Badge>
+              </div>
+              <div className="flex gap-0.5 sm:gap-1 lg:opacity-0 transition-opacity lg:group-hover:opacity-100">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 sm:h-8 sm:w-8"
+                  onClick={() => onEdit(eleve)}
+                >
+                  <Pencil className="h-3.5 w-3.5 sm:h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Supprimer ${eleve.prenom} ${eleve.nom} et toutes ses données associées ?`,
+                      )
+                    ) {
+                      onDelete(eleve.id);
+                      toast.success("Élève supprimé");
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1.5">
+                <Phone className="h-3 w-3" /> {formatTel(eleve.telephone)}
+              </p>
+              {eleve.email && (
+                <p className="flex items-center gap-1.5 truncate">
+                  <Mail className="h-3 w-3" /> {eleve.email}
+                </p>
+              )}
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                Dossier {eleve.dossier_code}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => onView(eleve.id)}>
+            <Eye className="mr-1 h-3.5 w-3.5" /> Voir
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => onEdit(eleve)}>
+            <Pencil className="mr-1 h-3.5 w-3.5" /> Modifier
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => {
+              if (confirm(`Supprimer ${eleve.prenom} ${eleve.nom} ?`)) {
+                onDelete(eleve.id);
+                toast.success("Élève supprimé");
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </Card>
+    );
+  },
+);
+
 function ElevesPage() {
   const { eleves, addEleve, updateEleve, deleteEleve } = useStore(
     useShallow((s) => ({
@@ -87,6 +185,7 @@ function ElevesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Eleve | null>(null);
   const [selectedEleveId, setSelectedEleveId] = useState<string | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(24);
 
   // Derived state
   const filtered = useMemo(() => {
@@ -99,6 +198,12 @@ function ElevesPage() {
         (e.email && e.email.toLowerCase().includes(q)),
     );
   }, [eleves, search]);
+
+  const displayedEleves = useMemo(() => {
+    return filtered.slice(0, displayLimit);
+  }, [filtered, displayLimit]);
+
+  const hasMore = filtered.length > displayLimit;
 
   const selectedEleve = useMemo(
     () => eleves.find((e) => e.id === selectedEleveId) || null,
@@ -221,95 +326,26 @@ function ElevesPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((e) => (
-              <Card key={e.id} className="group p-3 sm:p-4 transition-all hover:shadow-elegant">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <div className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs sm:text-sm font-semibold text-primary-foreground uppercase">
-                    {(e.prenom?.[0] || "") + (e.nom?.[0] || "")}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-1 sm:gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm sm:text-base font-semibold text-foreground">
-                          {e.prenom} {e.nom}
-                        </p>
-                        <Badge variant="secondary" className="mt-0.5 text-[9px] sm:text-[10px]">
-                          {e.type_permis}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-0.5 sm:gap-1 lg:opacity-0 transition-opacity lg:group-hover:opacity-100">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          onClick={() => handleOpen(e)}
-                        >
-                          <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `Supprimer ${e.prenom} ${e.nom} et toutes ses données associées ?`,
-                              )
-                            ) {
-                              deleteEleve(e.id);
-                              toast.success("Élève supprimé");
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                      <p className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3" /> {formatTel(e.telephone)}
-                      </p>
-                      {e.email && (
-                        <p className="flex items-center gap-1.5 truncate">
-                          <Mail className="h-3 w-3" /> {e.email}
-                        </p>
-                      )}
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-                        Dossier {e.dossier_code}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setSelectedEleveId(e.id)}>
-                    <Eye className="mr-1 h-3.5 w-3.5" /> Voir
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleOpen(e)}
-                  >
-                    <Pencil className="mr-1 h-3.5 w-3.5" /> Modifier
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => {
-                      if (confirm(`Supprimer ${e.prenom} ${e.nom} ?`)) {
-                        deleteEleve(e.id);
-                        toast.success("Élève supprimé");
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <>
+            <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+              {displayedEleves.map((e) => (
+                <EleveCard
+                  key={e.id}
+                  eleve={e}
+                  onEdit={handleOpen}
+                  onDelete={deleteEleve}
+                  onView={setSelectedEleveId}
+                />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <Button variant="outline" onClick={() => setDisplayLimit((l) => l + 24)}>
+                  Charger plus d'élèves ({filtered.length - displayLimit} restants)
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -591,11 +627,9 @@ function EleveDialog({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="dn">Né(e) le *</Label>
-                    <Input
-                      id="dn"
-                      type="date"
+                    <DatePicker
                       value={form.date_naissance}
-                      onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
+                      onChange={(v) => setForm({ ...form, date_naissance: v })}
                       required
                     />
                   </div>
@@ -640,11 +674,9 @@ function EleveDialog({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="di">Date d'inscription *</Label>
-                    <Input
-                      id="di"
-                      type="date"
+                    <DatePicker
                       value={form.date_inscription}
-                      onChange={(e) => setForm({ ...form, date_inscription: e.target.value })}
+                      onChange={(v) => setForm({ ...form, date_inscription: v })}
                       required
                     />
                   </div>
@@ -763,7 +795,6 @@ function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: 
       examens: s.examens,
       inscriptions: s.inscriptions,
       formations: s.formations,
-      getMontantPaye: s.getMontantPaye,
       getStatutFacture: s.getStatutFacture,
     })),
   );
@@ -1003,3 +1034,4 @@ function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: 
     </Dialog>
   );
 }
+

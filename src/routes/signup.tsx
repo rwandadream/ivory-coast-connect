@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, Lock, Loader2, ArrowRight, Car } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { signUp } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -54,16 +55,12 @@ function SignupPage() {
         <div className="glass glass-hover rounded-[3rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.7)] border-white/5 p-10 sm:p-14 backdrop-blur-3xl transition-all duration-700">
           {/* Brand Header */}
           <div className="mb-12 flex flex-col items-center text-center">
-            <div className="group mb-8 relative">
-              <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-2xl group-hover:bg-primary/30 transition-all duration-500" />
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow ring-1 ring-white/20 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
-                <Car className="h-10 w-10 text-primary-foreground" />
+            <div className="group mb-8 relative flex flex-col items-center">
+              <div className="absolute -inset-6 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500" />
+              <div className="relative z-10 transition-all duration-500 hover:scale-105">
+                <Logo size={130} />
               </div>
             </div>
-
-            <h1 className="text-4xl font-black tracking-tighter text-white mb-3">
-              SARAH <span className="text-primary-glow">AUTO</span>
-            </h1>
             <div className="h-1 w-16 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full mb-4 opacity-50" />
             <p className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40">
               Créer votre compte

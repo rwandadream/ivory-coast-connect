@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, Lock, Loader2, ArrowRight, Car, User, Hash, Phone } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowRight, User, Hash, Phone } from "lucide-react";
 import { signIn, validateStudentCredentials } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/store";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -78,15 +79,12 @@ function LoginPage() {
       <div className="relative z-10 w-full max-w-[500px] px-6 py-12 animate-fade-in-up">
         <div className="glass glass-hover rounded-[3rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.7)] border-white/5 p-8 sm:p-12 backdrop-blur-3xl transition-all duration-700">
           <div className="mb-8 flex flex-col items-center text-center">
-            <div className="group mb-6 relative">
-              <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-2xl group-hover:bg-primary/30 transition-all duration-500" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow ring-1 ring-white/20">
-                <Car className="h-8 w-8 text-primary-foreground" />
+            <div className="group mb-6 relative flex flex-col items-center">
+              <div className="absolute -inset-6 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500" />
+              <div className="relative z-10 transition-all duration-500 hover:scale-105">
+                <Logo size={130} />
               </div>
             </div>
-            <h1 className="text-3xl font-black tracking-tighter text-white mb-2">
-              SARAH <span className="text-primary-glow">AUTO</span>
-            </h1>
           </div>
 
           <Tabs defaultValue="student" className="w-full">

@@ -1,34 +1,26 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { useShallow } from "zustand/shallow";
 import {
   LogOut,
   CalendarDays,
-  FileText,
-  Wallet,
-  ClipboardCheck,
-  Download,
   Car,
   Clock,
   MapPin,
-  CheckCircle2,
-  AlertCircle,
   Phone,
   MessageCircle,
-  Image as ImageIcon,
   User,
   Mail,
+  Camera,
 } from "lucide-react";
-import { useStore, formatXOF, formatTel } from "@/lib/store";
+import { formatXOF, formatTel } from "@/lib/store";
 import { clearSession, getSessionId } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
-import { cn, compressImage } from "@/lib/utils";
-import { Camera } from "lucide-react";
+import { useStudent, useStudentPlanning, useStudentFactures, useUpdateEleve, usePaiements, useFormations, useInscriptions } from "@/lib/api/database.hooks";
+import { compressImage } from "@/lib/utils";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({ meta: [{ title: "Mon Espace — SARAH AUTO" }] }),
@@ -39,38 +31,20 @@ function StudentPortal() {
   const navigate = useNavigate();
   const studentId = getSessionId();
 
-  const {
-    eleves,
-    planning_sessions,
-    factures,
-    paiements,
-    examens,
-    formations,
-    moniteurs,
-    getStatutFacture,
-    updateEleve,
-  } = useStore(
-    useShallow((s) => ({
-      eleves: s.eleves,
-      planning_sessions: s.planning_sessions,
-      factures: s.factures,
-      paiements: s.paiements,
-      examens: s.examens,
-      formations: s.formations,
-      moniteurs: s.moniteurs,
-      getStatutFacture: s.getStatutFacture,
-      updateEleve: s.updateEleve,
-    })),
-  );
-
-  const student = useMemo(() => eleves.find((e) => e.id === studentId), [eleves, studentId]);
+  const { data: student, isLoading: isLoadingStudent } = useStudent(studentId);
+  const { data: studentPlanning = [] } = useStudentPlanning(studentId);
+  const { data: studentFactures = [] } = useStudentFactures(studentId);
+  const { data: allPaiements = [] } = usePaiements();
+  const { data: formations = [] } = useFormations();
+  const { data: inscriptions = [] } = useInscriptions();
+  const { mutateAsync: updateEleve } = useUpdateEleve();
 
   const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && student) {
       try {
-        const compressed = await compressImage(file, 400, 0.8); // Higher quality but smaller size for avatar
-        await updateEleve(student.id, { photo_profil: compressed });
+        const compressed = await compressImage(file, 400, 0.8);
+        await updateEleve({ id: student.id, data: { photo_profil: compressed } });
         toast.success("Photo de profil mise à jour !");
       } catch (err) {
         toast.error("Erreur lors de la mise à jour de la photo");
@@ -78,35 +52,13 @@ function StudentPortal() {
     }
   };
 
-  const studentPlanning = useMemo(
-    () =>
-      planning_sessions
-        .filter((s) => s.eleve_id === studentId)
-        .map((s) => ({
-          ...s,
-          moniteur: moniteurs.find((m) => m.id === s.moniteur_id),
-        }))
-        .sort((a, b) => new Date(a.date_heure).getTime() - new Date(b.date_heure).getTime()),
-    [planning_sessions, studentId, moniteurs],
-  );
-
-  const studentFactures = useMemo(
-    () => factures.filter((f) => f.eleve_id === studentId),
-    [factures, studentId],
-  );
-
-  const studentExamens = useMemo(
-    () => examens.filter((x) => x.eleve_id === studentId),
-    [examens, studentId],
-  );
-
   const totalMontant = useMemo(
     () => studentFactures.reduce((sum, f) => sum + f.montant, 0),
     [studentFactures],
   );
   const totalPaye = useMemo(
-    () => paiements.filter((p) => p.eleve_id === studentId).reduce((sum, p) => sum + p.montant, 0),
-    [paiements, studentId],
+    () => allPaiements.filter((p) => p.eleve_id === studentId).reduce((sum, p) => sum + p.montant, 0),
+    [allPaiements, studentId],
   );
   const resteAPayer = Math.max(0, totalMontant - totalPaye);
 
@@ -120,9 +72,9 @@ function StudentPortal() {
   };
 
   const handleDownloadInvoice = async (factureId: string) => {
-    const f = factures.find((x) => x.id === factureId);
+    const f = studentFactures.find((x) => x.id === factureId);
     if (!f || !student) return;
-    const inscription = useStore.getState().inscriptions.find((i) => i.id === f.inscription_id);
+    const inscription = inscriptions.find((i) => i.id === f.inscription_id);
     const formationData = formations.find((fr) => fr.id === inscription?.formation_id);
 
     try {
@@ -137,7 +89,7 @@ function StudentPortal() {
         },
         formation: formationData?.nom || "Formation Permis",
         montant: f.montant,
-        paiements: paiements
+        paiements: allPaiements
           .filter((p) => p.facture_id === f.id)
           .map((p) => ({
             date: p.date_paiement || p.created_at || "",
@@ -151,10 +103,19 @@ function StudentPortal() {
     }
   };
 
-  if (!isClient || !student) {
+  if (!isClient || isLoadingStudent) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center">
+        <h1 className="text-xl font-bold text-white mb-4">Session expirée ou dossier introuvable</h1>
+        <Button onClick={() => navigate({ to: "/login" })}>Retour à la connexion</Button>
       </div>
     );
   }
@@ -223,7 +184,6 @@ function StudentPortal() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-lg px-6 space-y-8">
-        {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           <div className="glass rounded-[2rem] p-5 border-white/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
@@ -244,7 +204,6 @@ function StudentPortal() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
         <Tabs defaultValue="planning" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-white/5 rounded-[2rem] p-1.5 h-14 border border-white/5 backdrop-blur-md">
             <TabsTrigger
@@ -263,7 +222,6 @@ function StudentPortal() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Planning Content */}
           <TabsContent value="planning" className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
@@ -294,7 +252,7 @@ function StudentPortal() {
                           <Car className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-black text-white text-lg">{session.titre}</p>
+                          <p className="font-black text-white text-lg">{session.titre || "Séance de conduite"}</p>
                           <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-0.5">
                             {new Date(session.date_heure).toLocaleDateString("fr-FR", {
                               weekday: "long",
@@ -312,7 +270,7 @@ function StudentPortal() {
                           })}
                         </p>
                         <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">
-                          {session.duree_minutes} min
+                          {session.duree_minutes || 60} min
                         </p>
                       </div>
                     </div>
@@ -321,7 +279,7 @@ function StudentPortal() {
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-xl bg-slate-800 border border-white/10 overflow-hidden">
                           <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session.moniteur?.nom || "User"}`}
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${(session.moniteurs as any)?.nom || "User"}`}
                             alt="Moniteur"
                           />
                         </div>
@@ -330,7 +288,7 @@ function StudentPortal() {
                             Moniteur
                           </p>
                           <p className="text-xs font-bold text-white">
-                            {session.moniteur?.prenom || "À affecter"} {session.moniteur?.nom || ""}
+                            {(session.moniteurs as any)?.prenom || "À affecter"} {(session.moniteurs as any)?.nom || ""}
                           </p>
                         </div>
                       </div>
@@ -344,7 +302,7 @@ function StudentPortal() {
                           </Badge>
                         )}
                         <Badge className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase px-3">
-                          {session.type}
+                          {session.type || "Formation"}
                         </Badge>
                       </div>
                     </div>
@@ -354,7 +312,6 @@ function StudentPortal() {
             )}
           </TabsContent>
 
-          {/* Informations Content */}
           <TabsContent value="infos" className="mt-8 space-y-6">
             <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/50 px-2">
               Détails de mon profil
@@ -458,7 +415,6 @@ function StudentPortal() {
         </Tabs>
       </main>
 
-      {/* Floating Action Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <a
           href={`https://wa.me/2250707070707?text=Bonjour,%20je%20suis%20l'élève%20${student.prenom}%20${student.nom}%20(Code:%20${student.dossier_code}).%20J'ai%20une%20question.`}

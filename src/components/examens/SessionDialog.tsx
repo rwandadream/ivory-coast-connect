@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -160,11 +161,9 @@ export function SessionDialog({ open, onOpenChange, session, onSave }: SessionDi
             </div>
             <div className="space-y-2">
               <Label htmlFor="date">Date de l'examen *</Label>
-              <Input
-                id="date"
-                type="date"
+              <DatePicker
                 value={formData.date_examen}
-                onChange={(e) => setFormData({ ...formData, date_examen: e.target.value })}
+                onChange={(v) => setFormData({ ...formData, date_examen: v })}
                 required
               />
             </div>

@@ -1,26 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useMemo, Suspense, lazy } from "react";
 import {
   Users,
-  GraduationCap,
   FileText,
   Wallet,
-  ClipboardCheck,
   TrendingUp,
-  ArrowRight,
   Plus,
   Download,
   CalendarDays,
 } from "lucide-react";
-import { useStore, formatXOF } from "@/lib/store";
+import { formatXOF } from "@/lib/store";
 import { cn, downloadCsv } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import React, { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { useShallow } from "zustand/shallow";
+import {
+  useEleves,
+  useFormations,
+  useFactures,
+  usePaiements,
+  useInscriptions,
+  useExamens,
+  useDepenses,
+} from "@/lib/api/database.hooks";
 
 const DashboardCharts = lazy(() => import("@/components/DashboardCharts"));
 const FinanceChart = lazy(() => import("@/components/FinanceChart"));
@@ -43,7 +47,7 @@ const StatCard = memo(function StatCard({
   label: string;
   value: string | number;
   hint?: string;
-  icon: typeof Users;
+  icon: any;
   accent?: boolean;
   index: number;
 }) {
@@ -89,29 +93,15 @@ const StatCard = memo(function StatCard({
 });
 
 function Dashboard() {
-  const {
-    eleves,
-    formations,
-    factures,
-    paiements,
-    inscriptions,
-    examens,
-    depenses,
-    getStatutFacture,
-    getMontantPaye,
-  } = useStore(
-    useShallow((s) => ({
-      eleves: s.eleves,
-      formations: s.formations,
-      factures: s.factures,
-      paiements: s.paiements,
-      inscriptions: s.inscriptions,
-      examens: s.examens,
-      depenses: s.depenses,
-      getStatutFacture: s.getStatutFacture,
-      getMontantPaye: s.getMontantPaye,
-    })),
-  );
+  const { data: eleves = [], isLoading: isLoadingEleves } = useEleves();
+  const { data: formations = [] } = useFormations();
+  const { data: factures = [] } = useFactures();
+  const { data: paiements = [] } = usePaiements();
+  const { data: inscriptions = [] } = useInscriptions();
+  const { data: examens = [] } = useExamens();
+  const { data: depenses = [] } = useDepenses();
+
+  const isLoading = isLoadingEleves;
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
@@ -125,11 +115,9 @@ function Dashboard() {
         const formation = inscription
           ? (formations.find((fr) => fr.id === inscription.formation_id) ?? null)
           : null;
-        const paye = getMontantPaye(f.id);
-        const statut = getStatutFacture(f.id);
-        return { facture: f, inscription, eleve, formation, paye, statut };
+        return { facture: f, inscription, eleve, formation, paye: (f as any).montant_paye, statut: (f as any).statut };
       }),
-    [factures, eleves, inscriptions, formations, getMontantPaye, getStatutFacture],
+    [factures, eleves, inscriptions, formations],
   );
 
   const totalRecouvre = useMemo(
@@ -139,10 +127,6 @@ function Dashboard() {
   const totalDepenses = useMemo(() => depenses.reduce((sum, d) => sum + d.montant, 0), [depenses]);
   const beneficeTotal = totalRecouvre - totalDepenses;
 
-  const totalFacture = useMemo(
-    () => facturesWithDetails.reduce((sum, item) => sum + item.facture.montant, 0),
-    [facturesWithDetails],
-  );
   const examensProgrammes = useMemo(
     () => examens.filter((e) => e.resultat === "en_attente").length,
     [examens],
@@ -171,7 +155,7 @@ function Dashboard() {
     () =>
       depenses
         .filter((d) => {
-          const date = new Date(d.date);
+          const date = new Date(d.date_depense || d.created_at || "");
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         })
         .reduce((sum, d) => sum + d.montant, 0),
@@ -211,10 +195,6 @@ function Dashboard() {
         inscriptions.some((inscription) => inscription.eleve_id === eleve.id),
       ).length,
     [eleves, inscriptions],
-  );
-  const elevesEnAttente = useMemo(
-    () => eleves.length - elevesActifs,
-    [eleves.length, elevesActifs],
   );
   const nouveauxCeMois = useMemo(
     () =>
@@ -292,6 +272,10 @@ function Dashboard() {
       console.error(error);
     }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center">Chargement du tableau de bord...</div>;
+  }
 
   return (
     <div className="space-y-8 pb-10 bg-background text-foreground">

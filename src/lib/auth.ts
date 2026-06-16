@@ -40,19 +40,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 export async function signOut() {
   await supabase.auth.signOut();
   if (typeof window !== "undefined") {
-    localStorage.removeItem("student-session-id");
+    localStorage.removeItem("sarah_auto_session_id");
+    localStorage.removeItem("sarah_auto_session_type");
   }
 }
 
 export function clearSession() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("student-session-id");
+    localStorage.removeItem("sarah_auto_session_id");
+    localStorage.removeItem("sarah_auto_session_type");
   }
+  supabase.auth.signOut().catch(console.error);
 }
 
 export function getSessionId() {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("student-session-id");
+    return localStorage.getItem("sarah_auto_session_id");
   }
   return null;
 }

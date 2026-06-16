@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useShallow } from "zustand/shallow";
 import { Plus, Wallet, Trash2, Banknote, Smartphone, Building } from "lucide-react";
 import { useStore, formatXOF, labelModePaiement, type ModePaiement } from "@/lib/store";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -302,11 +303,9 @@ function PaiementDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="d">Date *</Label>
-              <Input
-                id="d"
-                type="date"
+              <DatePicker
                 value={date_paiement}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
                 required
               />
             </div>

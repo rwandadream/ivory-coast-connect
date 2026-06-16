@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
 import { Plus, FileText, Printer, Trash2, Eye, Download, MessageCircle } from "lucide-react";
 import { useStore, formatXOF, formatTel, type Facture, type Eleve } from "@/lib/store";
+import { Logo } from "@/components/Logo";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { MoneyInput } from "@/components/ui/money-input";
 import {
   Select,
@@ -395,12 +397,10 @@ function NouvelleInscriptionDialog({
               />
             </div>
             <div>
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
+              <Label htmlFor="df">Date d'émission *</Label>
+              <DatePicker
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
                 required
               />
             </div>
@@ -490,10 +490,13 @@ function FactureView({ factureId, onClose }: { factureId: string | null; onClose
         {f ? (
           <div className="space-y-6 p-2">
             <div className="flex items-start justify-between border-b pb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-primary">SARAH AUTO</h2>
-                <p className="text-xs text-muted-foreground">Auto-école · Centre de Formation</p>
-                <p className="text-xs text-muted-foreground">Abidjan, Côte d'Ivoire</p>
+              <div className="flex items-center gap-3">
+                <Logo size={60} />
+                <div>
+                  <h2 className="text-2xl font-bold text-primary">SARAH AUTO</h2>
+                  <p className="text-xs text-muted-foreground">Auto-école · Centre de Formation</p>
+                  <p className="text-xs text-muted-foreground">Abidjan, Côte d'Ivoire</p>
+                </div>
               </div>
               <div className="text-right">
                 <p className="text-xs uppercase font-bold text-muted-foreground">Facture</p>

@@ -9,7 +9,6 @@ import {
   BarChart3,
   ClipboardCheck,
   ShieldCheck,
-  Car,
   LogOut,
   Menu,
   ChevronLeft,
@@ -24,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { clearSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Logo } from "@/components/Logo";
 
 const navItems = [
   { to: "/", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
@@ -126,8 +126,8 @@ export function AppShell({
           >
             <div className="flex items-center justify-between gap-3 border-b border-sidebar-border/80 bg-background/95 px-4 py-4 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-3xl bg-gradient-primary shadow-glow text-primary-foreground">
-                  <Car className="h-5 w-5" />
+                <div className="flex items-center justify-center transition-all duration-300">
+                  <Logo size={collapsed && !mobileMenuOpen ? 38 : 42} />
                 </div>
                 {(!collapsed || mobileMenuOpen) && (
                   <div>
@@ -260,15 +260,7 @@ export function AppShell({
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="hidden rounded-full px-4 sm:flex"
-                  onClick={() => toast("Espace administrateur actif.")}
-                >
-                  <UserCircle className="h-4 w-4" />
-                  Admin
-                </Button>
+
               </div>
             </div>
             <div className="hidden border-t border-sidebar-border/50 px-4 py-2 text-[10px] text-muted-foreground sm:block sm:px-6 sm:text-xs lg:px-8">

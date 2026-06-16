@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 import {
@@ -32,6 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -670,11 +671,9 @@ function ExamenDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="de">Date *</Label>
-              <Input
-                id="de"
-                type="date"
+              <DatePicker
                 value={date_examen}
-                onChange={(e) => setDateExamen(e.target.value)}
+                onChange={setDateExamen}
                 required
               />
             </div>
