@@ -22,7 +22,17 @@ export default defineConfig({
     },
   },
   ssr: {
-    // Inclut toutes les dépendances dans le bundle pour éviter les ERR_MODULE_NOT_FOUND
-    noExternal: true,
+    // On ne met en noExternal que ce qui est nécessaire pour TanStack Start
+    noExternal: ['@tanstack/react-start', '@tanstack/react-router', '@tanstack/react-query'],
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-dom/server',
+        'lucide-react',
+      ],
+    },
   },
 });
