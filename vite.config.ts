@@ -14,7 +14,15 @@ export default defineConfig({
   build: {
     // TanStack Start a besoin d'un build SSR propre
     ssr: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
+    reportCompressedSize: false, // Accélère le build et réduit les logs
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Supprime les warnings d'imports inutilisés qui polluent la console
+        if (warning.code === "UNUSED_EXTERNAL_IMPORT") return;
+        warn(warning);
+      },
+    },
   },
   server: {
     host: "::",
