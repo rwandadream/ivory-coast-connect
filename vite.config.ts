@@ -12,26 +12,17 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   build: {
-    // TanStack Start a besoin d'un build SSR propre
     ssr: true,
     chunkSizeWarningLimit: 2000,
-    reportCompressedSize: false,
     rollupOptions: {
       output: {
-        // Force tout le code serveur dans un seul fichier
+        // Crucial: Évite la création de chunks séparés pour le serveur
         inlineDynamicImports: true,
-      },
-      onwarn(warning, warn) {
-        if (warning.code === "UNUSED_EXTERNAL_IMPORT") return;
-        warn(warning);
       },
     },
   },
   ssr: {
+    // Inclut toutes les dépendances dans le bundle pour éviter les ERR_MODULE_NOT_FOUND
     noExternal: true,
-  },
-  server: {
-    host: "::",
-    port: 8080,
   },
 });
