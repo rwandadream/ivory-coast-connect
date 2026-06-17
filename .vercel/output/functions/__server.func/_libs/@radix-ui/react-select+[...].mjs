@@ -3,7 +3,7 @@ import { l as require_react_dom, u as require_react } from "../@floating-ui/reac
 import { a as createSlot, c as require_jsx_runtime, n as Primitive, s as useComposedRefs } from "./react-arrow+[...].mjs";
 import { t as clamp } from "../radix-ui__number.mjs";
 import { t as composeEventHandlers } from "../radix-ui__primitive.mjs";
-import { a as Presence, i as useControllableState, l as createContextScope, r as usePrevious, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
+import { a as Presence, c as createContextScope, i as useControllableState, r as usePrevious, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
 import { t as createCollection } from "../radix-ui__react-collection.mjs";
 import { t as useDirection } from "../radix-ui__react-direction.mjs";
 import { c as require_es5$1, d as useId, f as FocusScope, h as useCallbackRef, l as require_es5, m as DismissableLayer, p as useFocusGuards, u as Portal } from "./react-dialog+[...].mjs";
@@ -375,7 +375,7 @@ var SelectContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const [searchRef, handleTypeaheadSearch] = useTypeaheadSearch((search) => {
 		const enabledItems = getItems().filter((item) => !item.disabled);
 		const nextItem = findNextItem(enabledItems, search, enabledItems.find((item) => item.ref.current === document.activeElement));
-		if (nextItem) setTimeout(() => nextItem.ref.current.focus());
+		if (nextItem) setTimeout(() => nextItem.ref.current?.focus());
 	});
 	const itemRefCallback = import_react.useCallback((node, value, disabled) => {
 		const isFirstValidItem = !firstValidItemFoundRef.current && !disabled;
@@ -726,7 +726,6 @@ var SelectItem = import_react.forwardRef((props, forwardedRef) => {
 			context.onOpenChange(false);
 		}
 	};
-	if (value === "") throw new Error("A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.");
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItemContextProvider, {
 		scope: __scopeSelect,
 		value,
@@ -813,7 +812,7 @@ var SelectItemText = import_react.forwardRef((props, forwardedRef) => {
 		id: itemContext.textId,
 		...itemTextProps,
 		ref: composedRefs
-	}), itemContext.isSelected && context.valueNode && !context.valueNodeHasChildren ? import_react_dom.createPortal(itemTextProps.children, context.valueNode) : null] });
+	}), itemContext.isSelected && context.valueNode && !context.valueNodeHasChildren && !shouldShowPlaceholder(context.value) ? import_react_dom.createPortal(itemTextProps.children, context.valueNode) : null] });
 });
 SelectItemText.displayName = ITEM_TEXT_NAME;
 var ITEM_INDICATOR_NAME = "SelectItemIndicator";
@@ -948,6 +947,7 @@ var SelectBubbleInput = import_react.forwardRef(({ __scopeSelect, ...props }, fo
 	const composedRefs = useComposedRefs(forwardedRef, ref);
 	const selectValue = value ?? "";
 	const prevValue = usePrevious(selectValue);
+	const hasEmptyValueOption = Array.from(nativeOptions).some((option) => (option.props.value ?? "") === "");
 	import_react.useEffect(() => {
 		const select = ref.current;
 		if (!select) return;
@@ -975,7 +975,7 @@ var SelectBubbleInput = import_react.forwardRef(({ __scopeSelect, ...props }, fo
 		},
 		ref: composedRefs,
 		defaultValue: selectValue,
-		children: [shouldShowPlaceholder(value) ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "" }) : null, Array.from(nativeOptions)]
+		children: [shouldShowPlaceholder(value) && !hasEmptyValueOption ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "" }) : null, Array.from(nativeOptions)]
 	}, nativeSelectKey);
 });
 SelectBubbleInput.displayName = BUBBLE_INPUT_NAME;

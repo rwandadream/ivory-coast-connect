@@ -5,26 +5,6 @@ import { t as composeEventHandlers } from "../radix-ui__primitive.mjs";
 //#region node_modules/@radix-ui/react-context/dist/index.mjs
 var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
 var import_jsx_runtime = require_jsx_runtime();
-function createContext2(rootComponentName, defaultContext) {
-	const Context = import_react.createContext(defaultContext);
-	Context.displayName = rootComponentName + "Context";
-	const Provider = (props) => {
-		const { children, ...context } = props;
-		const value = import_react.useMemo(() => context, Object.values(context));
-		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Context.Provider, {
-			value,
-			children
-		});
-	};
-	Provider.displayName = rootComponentName + "Provider";
-	function useContext2(consumerName) {
-		const context = import_react.useContext(Context);
-		if (context) return context;
-		if (defaultContext !== void 0) return defaultContext;
-		throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
-	}
-	return [Provider, useContext2];
-}
 function createContextScope(scopeName, createContextScopeDeps = []) {
 	let defaultContexts = [];
 	function createContext3(rootComponentName, defaultContext) {
@@ -491,4 +471,4 @@ function getState(checked) {
 	return isIndeterminate(checked) ? "indeterminate" : checked ? "checked" : "unchecked";
 }
 //#endregion
-export { Presence as a, createContext2 as c, useControllableState as i, createContextScope as l, CheckboxIndicator as n, useSize as o, usePrevious as r, useLayoutEffect2 as s, Checkbox as t };
+export { Presence as a, createContextScope as c, useControllableState as i, CheckboxIndicator as n, useSize as o, usePrevious as r, useLayoutEffect2 as s, Checkbox as t };

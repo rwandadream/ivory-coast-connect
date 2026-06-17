@@ -13,26 +13,16 @@ export default defineConfig({
   ],
   build: {
     ssr: true,
+    minify: false, // Plus facile à débugger si besoin
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        // Crucial: Évite la création de chunks séparés pour le serveur
         inlineDynamicImports: true,
+        format: 'esm',
       },
     },
   },
   ssr: {
-    // On ne met en noExternal que ce qui est nécessaire pour TanStack Start
-    noExternal: ['@tanstack/react-start', '@tanstack/react-router', '@tanstack/react-query'],
-    optimizeDeps: {
-      include: [
-        'react',
-        'react-dom',
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        'react-dom/server',
-        'lucide-react',
-      ],
-    },
+    noExternal: true, // On repasse en true pour tout inclure dans le bundle monolithique
   },
 });

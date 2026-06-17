@@ -2,7 +2,7 @@ import { o as __toESM } from "../_runtime.mjs";
 import { u as require_react } from "./@floating-ui/react-dom+[...].mjs";
 import { a as createSlot, c as require_jsx_runtime, n as Primitive, s as useComposedRefs } from "./@radix-ui/react-arrow+[...].mjs";
 import { t as composeEventHandlers } from "./radix-ui__primitive.mjs";
-import { a as Presence, i as useControllableState, l as createContextScope } from "./@radix-ui/react-checkbox+[...].mjs";
+import { a as Presence, c as createContextScope, i as useControllableState } from "./@radix-ui/react-checkbox+[...].mjs";
 import { c as require_es5$1, d as useId, f as FocusScope, l as require_es5, m as DismissableLayer, p as useFocusGuards, u as Portal$1 } from "./@radix-ui/react-dialog+[...].mjs";
 import { _ as Arrow, b as createPopperScope, g as Anchor, v as Content, y as Root2$1 } from "./@radix-ui/react-dropdown-menu+[...].mjs";
 //#region node_modules/@radix-ui/react-popover/dist/index.mjs
@@ -199,6 +199,7 @@ var PopoverContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			onPointerDownOutside,
 			onFocusOutside,
 			onDismiss: () => context.onOpenChange(false),
+			deferPointerDownOutside: true,
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content, {
 				"data-state": getState(context.open),
 				role: "dialog",

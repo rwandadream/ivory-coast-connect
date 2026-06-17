@@ -2,7 +2,7 @@ import { o as __toESM } from "../../_runtime.mjs";
 import { a as offset, c as useFloating, i as limitShift, n as flip, o as shift, r as hide, s as size, t as arrow, u as require_react } from "../@floating-ui/react-dom+[...].mjs";
 import { a as createSlot, c as require_jsx_runtime, n as Primitive, o as composeRefs, r as dispatchDiscreteCustomEvent, s as useComposedRefs, t as Root$1 } from "./react-arrow+[...].mjs";
 import { t as composeEventHandlers } from "../radix-ui__primitive.mjs";
-import { a as Presence, i as useControllableState, l as createContextScope, o as useSize, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
+import { a as Presence, c as createContextScope, i as useControllableState, o as useSize, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
 import { t as createCollection } from "../radix-ui__react-collection.mjs";
 import { t as useDirection } from "../radix-ui__react-direction.mjs";
 import { c as require_es5$1, d as useId, f as FocusScope, h as useCallbackRef, l as require_es5, m as DismissableLayer, p as useFocusGuards, u as Portal$1 } from "./react-dialog+[...].mjs";
@@ -58,7 +58,7 @@ PopperAnchor.displayName = ANCHOR_NAME$1;
 var CONTENT_NAME$2 = "PopperContent";
 var [PopperContentProvider, useContentContext] = createPopperContext(CONTENT_NAME$2);
 var PopperContent = import_react.forwardRef((props, forwardedRef) => {
-	const { __scopePopper, side = "bottom", sideOffset = 0, align = "center", alignOffset = 0, arrowPadding = 0, avoidCollisions = true, collisionBoundary, collisionPadding: collisionPaddingProp = 0, sticky = "partial", hideWhenDetached = false, updatePositionStrategy = "optimized", onPlaced, ...contentProps } = props;
+	const { __scopePopper, side = "bottom", sideOffset = 0, align = "center", alignOffset = 0, arrowPadding = 0, avoidCollisions = true, collisionBoundary = [], collisionPadding: collisionPaddingProp = 0, sticky = "partial", hideWhenDetached = false, updatePositionStrategy = "optimized", onPlaced, ...contentProps } = props;
 	const context = usePopperContext(CONTENT_NAME$2, __scopePopper);
 	const [content, setContent] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
@@ -74,11 +74,11 @@ var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 		left: 0,
 		...collisionPaddingProp
 	};
-	const boundary = collisionBoundary ? Array.isArray(collisionBoundary) ? collisionBoundary : [collisionBoundary] : void 0;
-	const hasExplicitBoundaries = boundary !== void 0 && boundary.length > 0;
+	const boundary = Array.isArray(collisionBoundary) ? collisionBoundary : [collisionBoundary];
+	const hasExplicitBoundaries = boundary.length > 0;
 	const detectOverflowOptions = {
 		padding: collisionPadding,
-		boundary: boundary?.filter(isNotNull),
+		boundary: boundary.filter(isNotNull),
 		altBoundary: hasExplicitBoundaries
 	};
 	const { refs, floatingStyles, placement, isPositioned, middlewareData } = useFloating({
@@ -121,7 +121,8 @@ var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 			}),
 			hideWhenDetached && hide({
 				strategy: "referenceHidden",
-				...detectOverflowOptions
+				...detectOverflowOptions,
+				boundary: hasExplicitBoundaries ? detectOverflowOptions.boundary : void 0
 			})
 		]
 	});
@@ -518,6 +519,12 @@ var Menu = (props) => {
 			document.removeEventListener("pointermove", handlePointer, { capture: true });
 		};
 	}, []);
+	import_react.useEffect(() => {
+		if (!open) return;
+		const handleBlur = () => handleOpenChange(false);
+		window.addEventListener("blur", handleBlur);
+		return () => window.removeEventListener("blur", handleBlur);
+	}, [open, handleOpenChange]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$1, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MenuProvider, {

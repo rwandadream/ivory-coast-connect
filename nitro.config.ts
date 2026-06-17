@@ -4,9 +4,6 @@ import { resolve } from "node:path";
 export default defineNitroConfig({
   preset: "vercel",
   
-  // Important : Nitro doit consommer le bundle généré par Vite
-  entry: resolve(__dirname, "dist/server/server.js"),
-  
   publicAssets: [
     {
       dir: resolve(__dirname, "dist/client"),

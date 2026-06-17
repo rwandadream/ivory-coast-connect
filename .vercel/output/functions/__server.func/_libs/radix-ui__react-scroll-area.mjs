@@ -3,7 +3,7 @@ import { u as require_react } from "./@floating-ui/react-dom+[...].mjs";
 import { c as require_jsx_runtime, n as Primitive, s as useComposedRefs } from "./@radix-ui/react-arrow+[...].mjs";
 import { t as clamp } from "./radix-ui__number.mjs";
 import { t as composeEventHandlers } from "./radix-ui__primitive.mjs";
-import { a as Presence, l as createContextScope, s as useLayoutEffect2 } from "./@radix-ui/react-checkbox+[...].mjs";
+import { a as Presence, c as createContextScope, s as useLayoutEffect2 } from "./@radix-ui/react-checkbox+[...].mjs";
 import { t as useDirection } from "./radix-ui__react-direction.mjs";
 import { h as useCallbackRef } from "./@radix-ui/react-dialog+[...].mjs";
 //#region node_modules/@radix-ui/react-scroll-area/dist/index.mjs
@@ -69,10 +69,7 @@ var ScrollAreaViewport = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeScrollArea, children, nonce, ...viewportProps } = props;
 	const context = useScrollAreaContext(VIEWPORT_NAME, __scopeScrollArea);
 	const composedRefs = useComposedRefs(forwardedRef, import_react.useRef(null), context.onViewportChange);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", {
-		dangerouslySetInnerHTML: { __html: `[data-radix-scroll-area-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-scroll-area-viewport]::-webkit-scrollbar{display:none}` },
-		nonce
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.div, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScrollAreaViewportStyle, { nonce }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.div, {
 		"data-radix-scroll-area-viewport": "",
 		...viewportProps,
 		ref: composedRefs,
@@ -103,6 +100,12 @@ var ScrollAreaViewport = import_react.forwardRef((props, forwardedRef) => {
 	})] });
 });
 ScrollAreaViewport.displayName = VIEWPORT_NAME;
+var ScrollAreaViewportStyle = import_react.memo(({ nonce }) => {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", {
+		dangerouslySetInnerHTML: { __html: `[data-radix-scroll-area-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-scroll-area-viewport]::-webkit-scrollbar{display:none}` },
+		nonce
+	});
+}, (prevProps, nextProps) => prevProps.nonce === nextProps.nonce);
 var SCROLLBAR_NAME = "ScrollAreaScrollbar";
 var ScrollAreaScrollbar = import_react.forwardRef((props, forwardedRef) => {
 	const { forceMount, ...scrollbarProps } = props;

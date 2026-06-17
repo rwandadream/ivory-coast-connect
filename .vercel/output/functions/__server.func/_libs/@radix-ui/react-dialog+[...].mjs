@@ -2,7 +2,7 @@ import { i as __require, o as __toESM, t as __commonJSMin } from "../../_runtime
 import { l as require_react_dom, u as require_react } from "../@floating-ui/react-dom+[...].mjs";
 import { a as createSlot, c as require_jsx_runtime, n as Primitive, r as dispatchDiscreteCustomEvent, s as useComposedRefs } from "./react-arrow+[...].mjs";
 import { t as composeEventHandlers } from "../radix-ui__primitive.mjs";
-import { a as Presence, c as createContext2, i as useControllableState, l as createContextScope, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
+import { a as Presence, c as createContextScope, i as useControllableState, s as useLayoutEffect2 } from "./react-checkbox+[...].mjs";
 //#region node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs
 var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
 function useCallbackRef(callback) {
@@ -35,10 +35,11 @@ var originalBodyPointerEvents;
 var DismissableLayerContext = import_react.createContext({
 	layers: /* @__PURE__ */ new Set(),
 	layersWithOutsidePointerEventsDisabled: /* @__PURE__ */ new Set(),
-	branches: /* @__PURE__ */ new Set()
+	branches: /* @__PURE__ */ new Set(),
+	dismissableSurfaces: /* @__PURE__ */ new Set()
 });
 var DismissableLayer = import_react.forwardRef((props, forwardedRef) => {
-	const { disableOutsidePointerEvents = false, onEscapeKeyDown, onPointerDownOutside, onFocusOutside, onInteractOutside, onDismiss, ...layerProps } = props;
+	const { disableOutsidePointerEvents = false, deferPointerDownOutside = false, onEscapeKeyDown, onPointerDownOutside, onFocusOutside, onInteractOutside, onDismiss, ...layerProps } = props;
 	const context = import_react.useContext(DismissableLayerContext);
 	const [node, setNode] = import_react.useState(null);
 	const ownerDocument = node?.ownerDocument ?? globalThis?.document;
@@ -50,15 +51,23 @@ var DismissableLayer = import_react.forwardRef((props, forwardedRef) => {
 	const index = node ? layers.indexOf(node) : -1;
 	const isBodyPointerEventsDisabled = context.layersWithOutsidePointerEventsDisabled.size > 0;
 	const isPointerEventsEnabled = index >= highestLayerWithOutsidePointerEventsDisabledIndex;
+	const isDeferredPointerDownOutsideRef = import_react.useRef(false);
 	const pointerDownOutside = usePointerDownOutside((event) => {
 		const target = event.target;
+		if (!(target instanceof Node)) return;
 		const isPointerDownOnBranch = [...context.branches].some((branch) => branch.contains(target));
 		if (!isPointerEventsEnabled || isPointerDownOnBranch) return;
 		onPointerDownOutside?.(event);
 		onInteractOutside?.(event);
 		if (!event.defaultPrevented) onDismiss?.();
-	}, ownerDocument);
+	}, {
+		ownerDocument,
+		deferPointerDownOutside,
+		isDeferredPointerDownOutsideRef,
+		dismissableSurfaces: context.dismissableSurfaces
+	});
 	const focusOutside = useFocusOutside((event) => {
+		if (deferPointerDownOutside && isDeferredPointerDownOutsideRef.current) return;
 		const target = event.target;
 		if ([...context.branches].some((branch) => branch.contains(target))) return;
 		onFocusOutside?.(event);
@@ -142,25 +151,81 @@ var DismissableLayerBranch = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 DismissableLayerBranch.displayName = BRANCH_NAME;
-function usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis?.document) {
+function useDismissableLayerSurface() {
+	const context = import_react.useContext(DismissableLayerContext);
+	const [node, setNode] = import_react.useState(null);
+	import_react.useEffect(() => {
+		if (!node) return;
+		context.dismissableSurfaces.add(node);
+		return () => {
+			context.dismissableSurfaces.delete(node);
+		};
+	}, [node, context.dismissableSurfaces]);
+	return setNode;
+}
+function usePointerDownOutside(onPointerDownOutside, args) {
+	const { ownerDocument = globalThis?.document, deferPointerDownOutside = false, isDeferredPointerDownOutsideRef, dismissableSurfaces } = args;
 	const handlePointerDownOutside = useCallbackRef(onPointerDownOutside);
 	const isPointerInsideReactTreeRef = import_react.useRef(false);
+	const isPointerDownOutsideRef = import_react.useRef(false);
+	const interceptedOutsideInteractionEventsRef = import_react.useRef(/* @__PURE__ */ new Map());
 	const handleClickRef = import_react.useRef(() => {});
 	import_react.useEffect(() => {
+		function resetOutsideInteraction() {
+			isPointerDownOutsideRef.current = false;
+			isDeferredPointerDownOutsideRef.current = false;
+			interceptedOutsideInteractionEventsRef.current.clear();
+		}
+		function isOutsideInteractionIntercepted() {
+			return Array.from(interceptedOutsideInteractionEventsRef.current.values()).some(Boolean);
+		}
+		function handleInteractionCapture(event) {
+			if (!isPointerDownOutsideRef.current) return;
+			const target = event.target;
+			if (!(target instanceof Node && [...dismissableSurfaces].some((surface) => surface.contains(target)))) interceptedOutsideInteractionEventsRef.current.set(event.type, true);
+			if (event.type === "click") window.setTimeout(() => {
+				if (isPointerDownOutsideRef.current) handleClickRef.current();
+			}, 0);
+		}
+		function handleInteractionBubble(event) {
+			if (isPointerDownOutsideRef.current) interceptedOutsideInteractionEventsRef.current.set(event.type, false);
+		}
 		const handlePointerDown = (event) => {
 			if (event.target && !isPointerInsideReactTreeRef.current) {
 				let handleAndDispatchPointerDownOutsideEvent2 = function() {
-					handleAndDispatchCustomEvent(POINTER_DOWN_OUTSIDE, handlePointerDownOutside, eventDetail, { discrete: true });
+					ownerDocument.removeEventListener("click", handleClickRef.current);
+					const wasOutsideInteractionIntercepted = isOutsideInteractionIntercepted();
+					resetOutsideInteraction();
+					if (!wasOutsideInteractionIntercepted) handleAndDispatchCustomEvent(POINTER_DOWN_OUTSIDE, handlePointerDownOutside, eventDetail, { discrete: true });
 				};
 				const eventDetail = { originalEvent: event };
-				if (event.pointerType === "touch") {
+				isPointerDownOutsideRef.current = true;
+				isDeferredPointerDownOutsideRef.current = deferPointerDownOutside && event.button === 0;
+				interceptedOutsideInteractionEventsRef.current.clear();
+				if (!deferPointerDownOutside || event.button !== 0) handleAndDispatchPointerDownOutsideEvent2();
+				else {
 					ownerDocument.removeEventListener("click", handleClickRef.current);
 					handleClickRef.current = handleAndDispatchPointerDownOutsideEvent2;
 					ownerDocument.addEventListener("click", handleClickRef.current, { once: true });
-				} else handleAndDispatchPointerDownOutsideEvent2();
-			} else ownerDocument.removeEventListener("click", handleClickRef.current);
+				}
+			} else {
+				ownerDocument.removeEventListener("click", handleClickRef.current);
+				resetOutsideInteraction();
+			}
 			isPointerInsideReactTreeRef.current = false;
 		};
+		const outsideInteractionEvents = [
+			"pointerup",
+			"mousedown",
+			"mouseup",
+			"touchstart",
+			"touchend",
+			"click"
+		];
+		for (const eventName of outsideInteractionEvents) {
+			ownerDocument.addEventListener(eventName, handleInteractionCapture, true);
+			ownerDocument.addEventListener(eventName, handleInteractionBubble);
+		}
 		const timerId = window.setTimeout(() => {
 			ownerDocument.addEventListener("pointerdown", handlePointerDown);
 		}, 0);
@@ -168,8 +233,18 @@ function usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis?
 			window.clearTimeout(timerId);
 			ownerDocument.removeEventListener("pointerdown", handlePointerDown);
 			ownerDocument.removeEventListener("click", handleClickRef.current);
+			for (const eventName of outsideInteractionEvents) {
+				ownerDocument.removeEventListener(eventName, handleInteractionCapture, true);
+				ownerDocument.removeEventListener(eventName, handleInteractionBubble);
+			}
 		};
-	}, [ownerDocument, handlePointerDownOutside]);
+	}, [
+		ownerDocument,
+		handlePointerDownOutside,
+		deferPointerDownOutside,
+		isDeferredPointerDownOutsideRef,
+		dismissableSurfaces
+	]);
 	return { onPointerDownCapture: () => isPointerInsideReactTreeRef.current = true };
 }
 function useFocusOutside(onFocusOutside, ownerDocument = globalThis?.document) {
@@ -440,7 +515,7 @@ function useId(deterministicId) {
 //#endregion
 //#region node_modules/@radix-ui/react-portal/dist/index.mjs
 var PORTAL_NAME$1 = "Portal";
-var Portal$1 = import_react.forwardRef((props, forwardedRef) => {
+var Portal = import_react.forwardRef((props, forwardedRef) => {
 	const { container: containerProp, ...portalProps } = props;
 	const [mounted, setMounted] = import_react.useState(false);
 	useLayoutEffect2(() => setMounted(true), []);
@@ -450,7 +525,7 @@ var Portal$1 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	}), container) : null;
 });
-Portal$1.displayName = PORTAL_NAME$1;
+Portal.displayName = PORTAL_NAME$1;
 //#endregion
 //#region node_modules/aria-hidden/dist/es5/index.js
 var require_es5$6 = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -1978,7 +2053,7 @@ var DialogPortal = (props) => {
 		forceMount,
 		children: import_react.Children.map(children, (child) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 			present: forceMount || context.open,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$1, {
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal, {
 				asChild: true,
 				container,
 				children: child
@@ -2005,6 +2080,7 @@ var Slot = createSlot("DialogOverlay.RemoveScroll");
 var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...overlayProps } = props;
 	const context = useDialogContext(OVERLAY_NAME, __scopeDialog);
+	const composedRefs = useComposedRefs(forwardedRef, useDismissableLayerSurface());
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_es5.RemoveScroll, {
 		as: Slot,
 		allowPinchZoom: true,
@@ -2012,7 +2088,7 @@ var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.div, {
 			"data-state": getState(context.open),
 			...overlayProps,
-			ref: forwardedRef,
+			ref: composedRefs,
 			style: {
 				pointerEvents: "auto",
 				...overlayProps.style
@@ -2095,10 +2171,8 @@ var DialogContentNonModal = import_react.forwardRef((props, forwardedRef) => {
 var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
 	const context = useDialogContext(CONTENT_NAME, __scopeDialog);
-	const contentRef = import_react.useRef(null);
-	const composedRefs = useComposedRefs(forwardedRef, contentRef);
 	useFocusGuards();
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusScope, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusScope, {
 		asChild: true,
 		loop: true,
 		trapped: trapFocus,
@@ -2111,13 +2185,11 @@ var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			"aria-labelledby": context.titleId,
 			"data-state": getState(context.open),
 			...contentProps,
-			ref: composedRefs,
+			ref: forwardedRef,
+			deferPointerDownOutside: true,
 			onDismiss: () => context.onOpenChange(false)
 		})
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TitleWarning, { titleId: context.titleId }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DescriptionWarning, {
-		contentRef,
-		descriptionId: context.descriptionId
-	})] })] });
+	}) });
 });
 var TITLE_NAME = "DialogTitle";
 var DialogTitle = import_react.forwardRef((props, forwardedRef) => {
@@ -2156,47 +2228,5 @@ DialogClose.displayName = CLOSE_NAME;
 function getState(open) {
 	return open ? "open" : "closed";
 }
-var TITLE_WARNING_NAME = "DialogTitleWarning";
-var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
-	contentName: CONTENT_NAME,
-	titleName: TITLE_NAME,
-	docsSlug: "dialog"
-});
-var TitleWarning = ({ titleId }) => {
-	const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
-	const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
-
-If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
-
-For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
-	import_react.useEffect(() => {
-		if (titleId) {
-			if (!document.getElementById(titleId)) console.error(MESSAGE);
-		}
-	}, [MESSAGE, titleId]);
-	return null;
-};
-var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
-var DescriptionWarning = ({ contentRef, descriptionId }) => {
-	const MESSAGE = `Warning: Missing \`Description\` or \`aria-describedby={undefined}\` for {${useWarningContext(DESCRIPTION_WARNING_NAME).contentName}}.`;
-	import_react.useEffect(() => {
-		const describedById = contentRef.current?.getAttribute("aria-describedby");
-		if (descriptionId && describedById) {
-			if (!document.getElementById(descriptionId)) console.warn(MESSAGE);
-		}
-	}, [
-		MESSAGE,
-		contentRef,
-		descriptionId
-	]);
-	return null;
-};
-var Root = Dialog;
-var Portal = DialogPortal;
-var Overlay = DialogOverlay;
-var Content = DialogContent;
-var Title = DialogTitle;
-var Description = DialogDescription;
-var Close = DialogClose;
 //#endregion
-export { Portal as a, require_es5 as c, useId as d, FocusScope as f, useCallbackRef as h, Overlay as i, require_es5$6 as l, DismissableLayer as m, Content as n, Root as o, useFocusGuards as p, Description as r, Title as s, Close as t, Portal$1 as u };
+export { DialogOverlay as a, require_es5 as c, useId as d, FocusScope as f, useCallbackRef as h, DialogDescription as i, require_es5$6 as l, DismissableLayer as m, DialogClose as n, DialogPortal as o, useFocusGuards as p, DialogContent as r, DialogTitle as s, Dialog as t, Portal as u };
