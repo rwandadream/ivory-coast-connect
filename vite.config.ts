@@ -14,6 +14,7 @@ export default defineConfig({
   build: {
     // TanStack Start a besoin d'un build SSR propre
     ssr: true,
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     host: "::",

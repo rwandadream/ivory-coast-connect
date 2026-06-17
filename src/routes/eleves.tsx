@@ -20,8 +20,12 @@ import { useStore, formatXOF, formatTel, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TelInput } from "@/components/TelInput";
-import { CniScanner } from "@/components/CniScanner";
 import { DatePicker } from "@/components/ui/date-picker";
+
+const CniScanner = React.lazy(() =>
+  import("@/components/CniScanner").then((m) => ({ default: m.CniScanner })),
+);
+
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -496,18 +500,22 @@ function EleveDialog({
         </DialogHeader>
 
         {showScanner ? (
-          <CniScanner
-            onClose={() => setShowScanner(false)}
-            onScanComplete={(data) => {
-              setForm((prev) => ({
-                ...prev,
-                nom: data.nom || prev.nom,
-                prenom: data.prenom || prev.prenom,
-                date_naissance: data.date_naissance || prev.date_naissance,
-              }));
-              setShowScanner(false);
-            }}
-          />
+          <React.Suspense
+            fallback={<div className="p-12 text-center text-slate-500">Chargement...</div>}
+          >
+            <CniScanner
+              onClose={() => setShowScanner(false)}
+              onScanComplete={(data) => {
+                setForm((prev) => ({
+                  ...prev,
+                  nom: data.nom || prev.nom,
+                  prenom: data.prenom || prev.prenom,
+                  date_naissance: data.date_naissance || prev.date_naissance,
+                }));
+                setShowScanner(false);
+              }}
+            />
+          </React.Suspense>
         ) : (
           <div className="max-h-[80vh] overflow-y-auto px-1">
             <form
