@@ -17,6 +17,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000,
     reportCompressedSize: false,
     rollupOptions: {
+      output: {
+        // Force tout le code serveur dans un seul fichier
+        inlineDynamicImports: true,
+      },
       onwarn(warning, warn) {
         if (warning.code === "UNUSED_EXTERNAL_IMPORT") return;
         warn(warning);
@@ -24,8 +28,6 @@ export default defineConfig({
     },
   },
   ssr: {
-    // Force l'inclusion de toutes les dépendances dans le bundle serveur
-    // pour éviter les erreurs "Module Not Found" sur Vercel
     noExternal: true,
   },
   server: {
