@@ -15,14 +15,18 @@ export default defineConfig({
     // TanStack Start a besoin d'un build SSR propre
     ssr: true,
     chunkSizeWarningLimit: 2000,
-    reportCompressedSize: false, // Accélère le build et réduit les logs
+    reportCompressedSize: false,
     rollupOptions: {
       onwarn(warning, warn) {
-        // Supprime les warnings d'imports inutilisés qui polluent la console
         if (warning.code === "UNUSED_EXTERNAL_IMPORT") return;
         warn(warning);
       },
     },
+  },
+  ssr: {
+    // Force l'inclusion de toutes les dépendances dans le bundle serveur
+    // pour éviter les erreurs "Module Not Found" sur Vercel
+    noExternal: true,
   },
   server: {
     host: "::",
