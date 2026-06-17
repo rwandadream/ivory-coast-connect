@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     tanstackStart(),
     react(),
@@ -13,7 +13,7 @@ export default defineConfig({
   ],
   build: {
     ssr: true,
-    minify: false, // Plus facile à débugger si besoin
+    minify: false,
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
@@ -23,6 +23,6 @@ export default defineConfig({
     },
   },
   ssr: {
-    noExternal: true, // On repasse en true pour tout inclure dans le bundle monolithique
+    noExternal: command === 'build' ? true : ['@tanstack/react-start', '@tanstack/react-router', '@tanstack/react-query'],
   },
-});
+}));
