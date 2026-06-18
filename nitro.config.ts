@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 
 export default defineNitroConfig({
   preset: "vercel",
-  
+  serveStatic: true,
+
   publicAssets: [
     {
       dir: resolve(__dirname, "dist/client"),
@@ -11,10 +12,9 @@ export default defineNitroConfig({
     },
   ],
 
-  // Configuration pour éviter les problèmes de mise en cache sur Vercel
   routeRules: {
     "/_server/**": { cache: false },
   },
 
-  compatibilityDate: "2024-06-16"
+  compatibilityDate: "2024-06-16",
 });

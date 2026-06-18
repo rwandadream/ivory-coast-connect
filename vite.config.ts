@@ -17,7 +17,6 @@ export default defineConfig(({ command }) => ({
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         format: 'esm',
       },
     },
