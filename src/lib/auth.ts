@@ -32,8 +32,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     id: user.id,
     email: user.email!,
     name: profile.name || user.email?.split("@")[0] || "",
-    role: profile.role,
-    created_at: profile.created_at,
+    role: profile.role as AuthUser["role"],
+    created_at: profile.created_at ?? "",
   };
 }
 

@@ -40,6 +40,6 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
       console.warn(`Supabase instance not available while accessing: ${String(prop)}`);
       return undefined;
     }
-    return instance[prop];
+    return (instance as unknown as Record<string | symbol, unknown>)[prop];
   },
 });

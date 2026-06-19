@@ -16,7 +16,7 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { useStore } from "@/lib/store";
-import { getCurrentUser, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 function NotFoundComponent() {

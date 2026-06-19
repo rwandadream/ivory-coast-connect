@@ -52,7 +52,7 @@ export function DatePicker({
             }
           }}
           initialFocus
-          captionLayout="dropdown-buttons"
+          captionLayout="dropdown"
           fromYear={1940}
           toYear={new Date().getFullYear() + 10}
           locale={fr}

@@ -1,3 +1,6 @@
+# Temporary dev files
+temp_*.html
+
 # Logs
 logs
 *.log
