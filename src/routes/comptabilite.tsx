@@ -20,6 +20,7 @@ import { useStore, formatXOF, type Depense } from "@/lib/store";
 import { getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,7 @@ function ComptabilitePage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Depense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Depense | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -230,12 +232,7 @@ function ComptabilitePage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => {
-                            if (confirm("Supprimer cette dépense ?")) {
-                              deleteDepense(d.id);
-                              toast.success("Dépense supprimée");
-                            }
-                          }}
+                          onClick={() => setDeleteTarget(d)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>
@@ -269,6 +266,25 @@ function ComptabilitePage() {
             toast.success("Dépense ajoutée");
           }
           setOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer cette dépense ?"
+        description={
+          deleteTarget
+            ? `La dépense "${deleteTarget.description || deleteTarget.categorie}" de ${formatXOF(deleteTarget.montant)} sera définitivement supprimée.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteDepense(deleteTarget.id);
+            toast.success("Dépense supprimée");
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>

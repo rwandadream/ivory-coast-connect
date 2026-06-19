@@ -5,6 +5,7 @@ import { Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useStore, formatTel, type Moniteur } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TelInput } from "@/components/TelInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ function MoniteursPage() {
   );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Moniteur | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Moniteur | null>(null);
 
   const totalMoniteurs = moniteurs.length;
   const disponibles = useMemo(
@@ -143,12 +145,7 @@ function MoniteursPage() {
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => {
-                    if (confirm(`Supprimer ${moniteur.prenom} ${moniteur.nom} ?`)) {
-                      deleteMoniteur(moniteur.id);
-                      toast.success("Moniteur supprimé");
-                    }
-                  }}
+                  onClick={() => setDeleteTarget(moniteur)}
                 >
                   <Trash2 className="mr-1 h-3 w-3" /> Supprimer
                 </Button>
@@ -171,6 +168,25 @@ function MoniteursPage() {
             toast.success("Moniteur ajouté");
           }
           setOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer ce moniteur ?"
+        description={
+          deleteTarget
+            ? `${deleteTarget.prenom} ${deleteTarget.nom} sera définitivement supprimé du système.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMoniteur(deleteTarget.id);
+            toast.success("Moniteur supprimé");
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>

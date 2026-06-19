@@ -5,6 +5,7 @@ import { Plus, CalendarDays, Filter, Download } from "lucide-react";
 import { useStore, type PlanningSession, type Moniteur, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +68,7 @@ function PlanningPage() {
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [filterMoniteur, setFilterMoniteur] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
 
@@ -296,12 +298,7 @@ function PlanningPage() {
                       size="sm"
                       variant="ghost"
                       className="text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        if (confirm("Supprimer ?")) {
-                          deletePlanningSession(s.id);
-                          toast.success("Supprimée");
-                        }
-                      }}
+                      onClick={() => setDeleteTarget(s.id)}
                     >
                       Supprimer
                     </Button>
@@ -337,6 +334,21 @@ function PlanningPage() {
             toast.success("Session ajoutée");
           }
           handleClose();
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer cette session ?"
+        description="Cette session de conduite sera définitivement supprimée du planning."
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deletePlanningSession(deleteTarget);
+            toast.success("Session supprimée");
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>

@@ -5,6 +5,7 @@ import { Plus, Car, Pencil, Trash2, Power } from "lucide-react";
 import { useStore, formatXOF, type Formation } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -40,6 +41,7 @@ function FormationsPage() {
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Formation | null>(null);
 
   const editingFormation = useMemo(
     () => formations.find((f) => f.id === editingId) || null,
@@ -89,12 +91,7 @@ function FormationsPage() {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => {
-                    if (confirm(`Supprimer le ${f.nom} ?`)) {
-                      deleteFormation(f.id);
-                      toast.success("Catégorie supprimée");
-                    }
-                  }}
+                  onClick={() => setDeleteTarget(f)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -147,6 +144,25 @@ function FormationsPage() {
             toast.success("Nouveau type de permis créé");
           }
           handleClose();
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer cette formation ?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.nom}" sera définitivement supprimée. Les élèves déjà inscrits ne seront pas affectés.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteFormation(deleteTarget.id);
+            toast.success("Catégorie supprimée");
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>

@@ -26,6 +26,7 @@ import {
 } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,6 +106,8 @@ function ExamensPage() {
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<ExamenSession | null>(null);
   const [activeSession, setActiveSession] = useState<ExamenSession | null>(null);
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<string | null>(null);
+  const [deleteExamenTarget, setDeleteExamenTarget] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<ResultatExamen | "all">("all");
   const [examFilter, setExamFilter] = useState<ExamType | "all">("all");
@@ -248,12 +251,7 @@ function ExamensPage() {
                     setEditingSession(s);
                     setSessionDialogOpen(true);
                   }}
-                  onDelete={(id) => {
-                    if (confirm("Supprimer cette session et tous ses résultats associés ?")) {
-                      deleteExamenSession(id);
-                      toast.success("Session supprimée");
-                    }
-                  }}
+                  onDelete={(id) => setDeleteSessionTarget(id)}
                   onView={(s) => {
                     setActiveSession(s);
                     setResultsDialogOpen(true);
@@ -469,12 +467,7 @@ function ExamensPage() {
                           size="icon"
                           variant="ghost"
                           className="text-destructive ml-auto"
-                          onClick={() => {
-                            if (confirm("Supprimer ?")) {
-                              deleteExamen(ex.id);
-                              toast.success("Supprimé");
-                            }
-                          }}
+                          onClick={() => setDeleteExamenTarget(ex.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -540,7 +533,35 @@ function ExamensPage() {
         </>
       )}
 
-      {/* Action Buttons for active session - displayed in Results dialog or similar */}
+      <ConfirmDialog
+        open={!!deleteSessionTarget}
+        onOpenChange={(open) => !open && setDeleteSessionTarget(null)}
+        title="Supprimer cette session ?"
+        description="La session et tous les résultats d'examens associés seront définitivement supprimés."
+        confirmLabel="Supprimer la session"
+        onConfirm={() => {
+          if (deleteSessionTarget) {
+            deleteExamenSession(deleteSessionTarget);
+            toast.success("Session supprimée");
+            setDeleteSessionTarget(null);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteExamenTarget}
+        onOpenChange={(open) => !open && setDeleteExamenTarget(null)}
+        title="Supprimer cet examen ?"
+        description="Cet examen individuel sera définitivement supprimé."
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteExamenTarget) {
+            deleteExamen(deleteExamenTarget);
+            toast.success("Examen supprimé");
+            setDeleteExamenTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

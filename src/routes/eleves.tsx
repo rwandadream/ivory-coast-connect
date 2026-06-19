@@ -19,6 +19,7 @@ import {
 import { useStore, formatXOF, formatTel, type Eleve } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TelInput } from "@/components/TelInput";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -83,12 +84,12 @@ const EleveCard = memo(
   ({
     eleve,
     onEdit,
-    onDelete,
+    onRequestDelete,
     onView,
   }: {
     eleve: Eleve;
     onEdit: (e: Eleve) => void;
-    onDelete: (id: string) => Promise<void>;
+    onRequestDelete: (e: Eleve) => void;
     onView: (id: string) => void;
   }) => {
     return (
@@ -120,16 +121,7 @@ const EleveCard = memo(
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
-                  onClick={() => {
-                    if (
-                      confirm(
-                        `Supprimer ${eleve.prenom} ${eleve.nom} et toutes ses données associées ?`,
-                      )
-                    ) {
-                      onDelete(eleve.id);
-                      toast.success("Élève supprimé");
-                    }
-                  }}
+                  onClick={() => onRequestDelete(eleve)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -161,12 +153,7 @@ const EleveCard = memo(
             size="icon"
             variant="ghost"
             className="text-destructive"
-            onClick={() => {
-              if (confirm(`Supprimer ${eleve.prenom} ${eleve.nom} ?`)) {
-                onDelete(eleve.id);
-                toast.success("Élève supprimé");
-              }
-            }}
+            onClick={() => onRequestDelete(eleve)}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -190,6 +177,7 @@ function ElevesPage() {
   const [editing, setEditing] = useState<Eleve | null>(null);
   const [selectedEleveId, setSelectedEleveId] = useState<string | null>(null);
   const [displayLimit, setDisplayLimit] = useState(24);
+  const [deleteTarget, setDeleteTarget] = useState<Eleve | null>(null);
 
   // Derived state
   const filtered = useMemo(() => {
@@ -337,7 +325,7 @@ function ElevesPage() {
                   key={e.id}
                   eleve={e}
                   onEdit={handleOpen}
-                  onDelete={deleteEleve}
+                  onRequestDelete={setDeleteTarget}
                   onView={setSelectedEleveId}
                 />
               ))}
@@ -370,6 +358,25 @@ function ElevesPage() {
       />
 
       <EleveDetailsDialog eleve={selectedEleve} onClose={() => setSelectedEleveId(null)} />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer cet élève ?"
+        description={
+          deleteTarget
+            ? `${deleteTarget.prenom} ${deleteTarget.nom} et toutes ses données associées (paiements, examens, sessions) seront définitivement supprimés.`
+            : undefined
+        }
+        confirmLabel="Supprimer définitivement"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteEleve(deleteTarget.id);
+            toast.success("Élève supprimé");
+            setDeleteTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

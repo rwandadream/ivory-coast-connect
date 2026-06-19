@@ -6,6 +6,7 @@ import { useStore, type User } from "@/lib/store";
 import { type AuthUser, getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ function UsersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   useEffect(() => {
@@ -202,12 +204,7 @@ function UsersPage() {
                       </button>
                       <button
                         className="h-8 w-8 inline-flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 text-destructive rounded-md transition-colors"
-                        onClick={() => {
-                          if (confirm(`Supprimer le compte de ${user.name} ?`)) {
-                            deleteUser(user.id);
-                            toast.success("Utilisateur supprimé");
-                          }
-                        }}
+                        onClick={() => setDeleteTarget(user)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -237,6 +234,25 @@ function UsersPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer cet utilisateur ?"
+        description={
+          deleteTarget
+            ? `Le compte de ${deleteTarget.name} (${deleteTarget.email}) sera définitivement supprimé. Il ne pourra plus se connecter à la plateforme.`
+            : undefined
+        }
+        confirmLabel="Supprimer le compte"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteUser(deleteTarget.id);
+            toast.success("Utilisateur supprimé");
+            setDeleteTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

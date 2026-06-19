@@ -5,6 +5,7 @@ import { Plus, Wallet, Trash2, Banknote, Smartphone, Building } from "lucide-rea
 import { useStore, formatXOF, labelModePaiement, type ModePaiement } from "@/lib/store";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ function PaiementsPage() {
 
   const [open, setOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -141,12 +143,7 @@ function PaiementsPage() {
                     size="icon"
                     variant="ghost"
                     className="text-destructive"
-                    onClick={() => {
-                      if (confirm("Supprimer ?")) {
-                        deletePaiement(p.id);
-                        toast.success("Supprimé");
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(p.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -165,6 +162,21 @@ function PaiementsPage() {
           await addPaiement(data);
           toast.success("Paiement enregistré");
           setOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Supprimer ce paiement ?"
+        description="Ce paiement sera définitivement supprimé. Le solde de la facture sera recalculé."
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deletePaiement(deleteTarget);
+            toast.success("Paiement supprimé");
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>
