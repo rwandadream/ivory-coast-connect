@@ -4,6 +4,9 @@ import { resolve } from "node:path";
 export default defineNitroConfig({
   preset: "vercel",
   serveStatic: true,
+  vercel: {
+    entryFormat: "node",
+  },
 
   publicAssets: [
     {

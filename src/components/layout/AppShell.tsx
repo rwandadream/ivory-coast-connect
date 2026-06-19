@@ -260,7 +260,6 @@ export function AppShell({
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
-
               </div>
             </div>
             <div className="hidden border-t border-sidebar-border/50 px-4 py-2 text-[10px] text-muted-foreground sm:block sm:px-6 sm:text-xs lg:px-8">

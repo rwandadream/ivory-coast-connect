@@ -1,14 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { memo, useMemo, Suspense, lazy } from "react";
-import {
-  Users,
-  FileText,
-  Wallet,
-  TrendingUp,
-  Plus,
-  Download,
-  CalendarDays,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Users, FileText, Wallet, TrendingUp, Plus, Download, CalendarDays } from "lucide-react";
 import { formatXOF } from "@/lib/store";
 import { cn, downloadCsv } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +40,7 @@ const StatCard = memo(function StatCard({
   label: string;
   value: string | number;
   hint?: string;
-  icon: any;
+  icon: LucideIcon;
   accent?: boolean;
   index: number;
 }) {
@@ -115,7 +108,14 @@ function Dashboard() {
         const formation = inscription
           ? (formations.find((fr) => fr.id === inscription.formation_id) ?? null)
           : null;
-        return { facture: f, inscription, eleve, formation, paye: (f as any).montant_paye, statut: (f as any).statut };
+        return {
+          facture: f,
+          inscription,
+          eleve,
+          formation,
+          paye: f.montant_paye,
+          statut: f.statut,
+        };
       }),
     [factures, eleves, inscriptions, formations],
   );

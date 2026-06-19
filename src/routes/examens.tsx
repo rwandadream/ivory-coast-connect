@@ -671,11 +671,7 @@ function ExamenDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="de">Date *</Label>
-              <DatePicker
-                value={date_examen}
-                onChange={setDateExamen}
-                required
-              />
+              <DatePicker value={date_examen} onChange={setDateExamen} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ins">Inspecteur</Label>

@@ -1,27 +1,20 @@
-import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
+import {
+  createStartHandler,
+  defaultStreamHandler,
+  type RequestHandler,
+} from "@tanstack/react-start/server";
+import type { Register } from "@tanstack/react-router";
 
-const handler = createStartHandler(defaultStreamHandler);
+const fetch = createStartHandler(defaultStreamHandler);
 
-export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
-    try {
-      // Sur Vercel, on peut logger la requête pour le debug
-      console.log(`[SSR] Request: ${request.method} ${request.url}`);
-      
-      const response = await handler(request);
-      return response;
-    } catch (error: any) {
-      console.error("CRITICAL SSR ERROR:", error);
-      
-      return new Response(JSON.stringify({
-        status: 500,
-        message: "Internal Server Error",
-        details: error?.message || "Unknown error",
-        path: request.url
-      }), { 
-        status: 500, 
-        headers: { "Content-Type": "application/json" } 
-      });
-    }
-  },
-};
+type ServerEntry = { fetch: RequestHandler<Register> };
+
+function createServerEntry(entry: ServerEntry): ServerEntry {
+  return {
+    async fetch(...args) {
+      return await entry.fetch(...args);
+    },
+  };
+}
+
+export default createServerEntry({ fetch });

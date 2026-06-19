@@ -1042,4 +1042,3 @@ function EleveDetailsDialog({ eleve, onClose }: { eleve: Eleve | null; onClose: 
     </Dialog>
   );
 }
-

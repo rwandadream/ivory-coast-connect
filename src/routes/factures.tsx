@@ -398,11 +398,7 @@ function NouvelleInscriptionDialog({
             </div>
             <div>
               <Label htmlFor="df">Date d'émission *</Label>
-              <DatePicker
-                value={date}
-                onChange={setDate}
-                required
-              />
+              <DatePicker value={date} onChange={setDate} required />
             </div>
           </div>
           <DialogFooter>

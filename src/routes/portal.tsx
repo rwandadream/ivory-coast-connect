@@ -19,7 +19,18 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
-import { useStudent, useStudentPlanning, useStudentFactures, useUpdateEleve, usePaiements, useFormations, useInscriptions } from "@/lib/api/database.hooks";
+import {
+  useStudent,
+  useStudentPlanning,
+  useStudentFactures,
+  useUpdateEleve,
+  usePaiements,
+  useFormations,
+  useInscriptions,
+} from "@/lib/api/database.hooks";
+import type { Database } from "@/lib/database.types";
+
+type MoniteurJoin = Pick<Database["public"]["Tables"]["moniteurs"]["Row"], "nom" | "prenom">;
 import { compressImage } from "@/lib/utils";
 
 export const Route = createFileRoute("/portal")({
@@ -57,7 +68,8 @@ function StudentPortal() {
     [studentFactures],
   );
   const totalPaye = useMemo(
-    () => allPaiements.filter((p) => p.eleve_id === studentId).reduce((sum, p) => sum + p.montant, 0),
+    () =>
+      allPaiements.filter((p) => p.eleve_id === studentId).reduce((sum, p) => sum + p.montant, 0),
     [allPaiements, studentId],
   );
   const resteAPayer = Math.max(0, totalMontant - totalPaye);
@@ -114,7 +126,9 @@ function StudentPortal() {
   if (!student) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center">
-        <h1 className="text-xl font-bold text-white mb-4">Session expirée ou dossier introuvable</h1>
+        <h1 className="text-xl font-bold text-white mb-4">
+          Session expirée ou dossier introuvable
+        </h1>
         <Button onClick={() => navigate({ to: "/login" })}>Retour à la connexion</Button>
       </div>
     );
@@ -241,73 +255,79 @@ function StudentPortal() {
               </div>
             ) : (
               <div className="space-y-4">
-                {studentPlanning.map((session) => (
-                  <div
-                    key={session.id}
-                    className="group glass p-5 rounded-[2.5rem] border-white/5 hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-500">
-                          <Car className="h-6 w-6" />
+                {studentPlanning.map((session) => {
+                  const moniteur = session.moniteurs as MoniteurJoin | null | undefined;
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="group glass p-5 rounded-[2.5rem] border-white/5 hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+                            <Car className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-black text-white text-lg">
+                              {session.titre || "Séance de conduite"}
+                            </p>
+                            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                              {new Date(session.date_heure).toLocaleDateString("fr-FR", {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-black text-white text-lg">{session.titre || "Séance de conduite"}</p>
-                          <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-0.5">
-                            {new Date(session.date_heure).toLocaleDateString("fr-FR", {
-                              weekday: "long",
-                              day: "numeric",
-                              month: "short",
+                        <div className="text-right">
+                          <p className="text-lg font-black text-white">
+                            {new Date(session.date_heure).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </p>
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                            {session.duree_minutes || 60} min
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-black text-white">
-                          {new Date(session.date_heure).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">
-                          {session.duree_minutes || 60} min
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="mt-6 flex items-center justify-between pt-5 border-t border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-slate-800 border border-white/10 overflow-hidden">
-                          <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${(session.moniteurs as any)?.nom || "User"}`}
-                            alt="Moniteur"
-                          />
+                      <div className="mt-6 flex items-center justify-between pt-5 border-t border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-xl bg-slate-800 border border-white/10 overflow-hidden">
+                            <img
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${moniteur?.nom || "User"}`}
+                              alt="Moniteur"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-tighter text-white/30">
+                              Moniteur
+                            </p>
+                            <p className="text-xs font-bold text-white">
+                              {moniteur?.prenom || "À affecter"} {moniteur?.nom || ""}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-tighter text-white/30">
-                            Moniteur
-                          </p>
-                          <p className="text-xs font-bold text-white">
-                            {(session.moniteurs as any)?.prenom || "À affecter"} {(session.moniteurs as any)?.nom || ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {session.lieu && (
-                          <Badge
-                            variant="outline"
-                            className="border-white/5 text-[10px] text-white/40"
-                          >
-                            <MapPin className="h-3 w-3 mr-1" /> {session.lieu}
+                        <div className="flex items-center gap-2">
+                          {session.lieu && (
+                            <Badge
+                              variant="outline"
+                              className="border-white/5 text-[10px] text-white/40"
+                            >
+                              <MapPin className="h-3 w-3 mr-1" /> {session.lieu}
+                            </Badge>
+                          )}
+                          <Badge className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase px-3">
+                            {session.type || "Formation"}
                           </Badge>
-                        )}
-                        <Badge className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase px-3">
-                          {session.type || "Formation"}
-                        </Badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>

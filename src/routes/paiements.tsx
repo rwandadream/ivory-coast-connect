@@ -303,11 +303,7 @@ function PaiementDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="d">Date *</Label>
-              <DatePicker
-                value={date_paiement}
-                onChange={setDate}
-                required
-              />
+              <DatePicker value={date_paiement} onChange={setDate} required />
             </div>
             <div>
               <Label htmlFor="ref">Référence</Label>
