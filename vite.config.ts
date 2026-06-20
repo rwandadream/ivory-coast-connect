@@ -22,7 +22,6 @@ export default defineConfig(({ command }) => ({
     tsconfigPaths(),
   ],
   build: {
-    ssr: true,
     minify: false,
     chunkSizeWarningLimit: 2000,
     rollupOptions: {

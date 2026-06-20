@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { Tables } from "./database.types";
 
 export type AuthUser = {
   id: string;
@@ -80,9 +81,6 @@ export async function signUp(email: string, password: string, name: string) {
   });
   return { data, error };
 }
-
-// Keep this for the student portal, but it will need to be adapted to Supabase later
-import { Tables } from "./database.types";
 
 export function validateStudentCredentials(
   dossierCode: string,

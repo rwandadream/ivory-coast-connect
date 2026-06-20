@@ -29,9 +29,9 @@ import {
   useInscriptions,
 } from "@/lib/api/database.hooks";
 import type { Database } from "@/lib/database.types";
+import { compressImage } from "@/lib/utils";
 
 type MoniteurJoin = Pick<Database["public"]["Tables"]["moniteurs"]["Row"], "nom" | "prenom">;
-import { compressImage } from "@/lib/utils";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({ meta: [{ title: "Mon Espace — SARAH AUTO" }] }),
@@ -156,7 +156,7 @@ function StudentPortal() {
                   />
                 ) : (
                   <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-primary text-2xl font-black text-white shadow-glow transition-all group-hover:brightness-90">
-                    {student.prenom[0]}
+                    {student.prenom?.[0] || "?"}
                   </div>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

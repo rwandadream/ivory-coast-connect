@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { useStore } from "@/lib/store";
 import { getSession } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 function NotFoundComponent() {
   return (
@@ -181,9 +181,12 @@ function RootComponent() {
 
     checkAuth();
 
+    const sb = getSupabase();
+    if (!sb) return;
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         setSessionId(session.user.id);
         setSessionType("admin");

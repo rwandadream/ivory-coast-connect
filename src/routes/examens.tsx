@@ -55,7 +55,6 @@ import { SessionCard } from "@/components/examens/SessionCard";
 import { SessionDialog } from "@/components/examens/SessionDialog";
 import { SessionElevesDialog } from "@/components/examens/SessionElevesDialog";
 import { ResultatsSession } from "@/components/examens/ResultatsSession";
-import { generateBordereauPDF } from "@/components/examens/BordereauPDF";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/examens")({
